@@ -1,4 +1,4 @@
-import { Elysia, t } from 'elysia'
+import { Elysia, NotFoundError, t } from 'elysia'
 import { openapi, fromTypes } from '@elysiajs/openapi'
 
 import {
@@ -8,6 +8,7 @@ import {
 	openingPrompt,
 	turnstile
 } from '@arona/libs'
+import { structure } from './libs/structure'
 
 const app = new Elysia()
 	.use(
@@ -19,6 +20,14 @@ const app = new Elysia()
 	.use(turnstile)
 	.get('/', 'Arona')
 	.get('/heath', 'ok')
+	.patch('/database/index', async ({ headers }) => {
+		if (headers['x-api-key'] !== (process.env['api-key'] ?? 'Blue Archive'))
+			throw new NotFoundError()
+
+		await structure()
+
+		return 'ok'
+	})
 	.post(
 		'/search',
 		async function* ({ body: { message, history } }) {
