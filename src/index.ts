@@ -39,7 +39,7 @@ const app = new Elysia()
 		return 'ok'
 	})
 	.post(
-		'/search',
+		'/ask',
 		async function* ({ body: { message, history } }) {
 			const embeddings = await openai.embeddings.create({
 				model: 'text-embedding-3-small',
@@ -50,7 +50,7 @@ const app = new Elysia()
 				`SELECT file, title, content, embedding <#> $1 AS distance
 				     FROM doc_chunks
 				     ORDER BY embedding <#> $1
-				     LIMIT 6`,
+				     LIMIT 5`,
 				[`[${embeddings.data[0].embedding.join(',')}]`]
 			)
 
