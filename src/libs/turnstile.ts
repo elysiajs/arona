@@ -29,6 +29,12 @@ export const turnstile = new Elysia()
 			server,
 			set
 		}) {
+			if (
+				headers['x-api-key'] ===
+				(process.env['api-key'] ?? 'Blue Archive')
+			)
+				return
+
 			if (!headers['x-turnstile-token'])
 				return status(400, {
 					message:
