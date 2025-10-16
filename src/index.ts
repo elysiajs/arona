@@ -6,7 +6,8 @@ import {
 	sql,
 	createInstruction,
 	openingPrompt,
-	turnstile
+	turnstile,
+	Reference
 } from '@arona/libs'
 import { structure } from './libs/structure'
 
@@ -21,7 +22,10 @@ const app = new Elysia()
 	.get('/', 'Arona')
 	.get('/heath', 'ok')
 	.patch('/database/index', async ({ headers }) => {
-		if (headers['x-api-key'] !== (process.env['api_key'] ?? 'Blue Archive'))
+		if (
+			process.env.NODE_ENV === 'development' ||
+			headers['x-api-key'] !== (process.env['api_key'] ?? 'Blue Archive')
+		)
 			throw new NotFoundError()
 
 		await structure()
@@ -36,15 +40,11 @@ const app = new Elysia()
 				input: message
 			})
 
-			const references: {
-				file: string
-				content: string
-				distance: number
-			}[] = await sql.unsafe(
-				`SELECT file, content, embedding <#> $1 AS distance
+			const references: Reference[] = await sql.unsafe(
+				`SELECT file, title, content, embedding <#> $1 AS distance
 				     FROM doc_chunks
 				     ORDER BY embedding <#> $1
-				     LIMIT 5`,
+				     LIMIT 6`,
 				[`[${embeddings.data[0].embedding.join(',')}]`]
 			)
 
@@ -70,11 +70,11 @@ const app = new Elysia()
 				if (content) yield content
 			}
 
-			yield '\n\nReferences:\n' +
+			yield '\n\nSource:\n' +
 				references
 					.map(
 						(reference) =>
-							`- https://elysiajs.com/${reference.file.slice(5, -3)}`
+							`- [${reference.title}](https://elysiajs.com/${reference.file.slice(5, -3)})`
 					)
 					.join('\n')
 		},

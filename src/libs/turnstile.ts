@@ -30,8 +30,9 @@ export const turnstile = new Elysia()
 			set
 		}) {
 			if (
+				process.env.NODE_ENV === 'development' ||
 				headers['x-api-key'] ===
-				(process.env['api_key'] ?? 'Blue Archive')
+					(process.env['api_key'] ?? 'Blue Archive')
 			)
 				return
 

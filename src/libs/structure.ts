@@ -154,6 +154,9 @@ export const structure = async () => {
 		totalOps++
 		_chunk.length = 0
 		size = 0
+
+		_chunk.push({ file, title, content })
+		size += content.length
 	}
 
 	queue.add(createEmbedding(totalOps, [..._chunk]))
