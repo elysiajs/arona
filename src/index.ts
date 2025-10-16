@@ -1,5 +1,6 @@
 import { Elysia, NotFoundError, t } from 'elysia'
 import { openapi, fromTypes } from '@elysiajs/openapi'
+import { cors } from '@elysiajs/cors'
 
 import {
 	openai,
@@ -16,6 +17,11 @@ const app = new Elysia()
 		openapi({
 			enabled: process.env.NODE_ENV !== 'production',
 			references: fromTypes()
+		})
+	)
+	.use(
+		cors({
+			origin: ['https://elysiajs.com', 'http://localhost:5173']
 		})
 	)
 	.use(turnstile)
