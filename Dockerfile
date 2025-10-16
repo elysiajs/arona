@@ -5,10 +5,8 @@ WORKDIR /app
 # Cache packages installation
 COPY package.json package.json
 COPY bun.lock bun.lock
-COPY scripts scripts
 
 RUN bun install
-RUN bun db:setup
 
 COPY src src
 COPY tsconfig.json tsconfig.json

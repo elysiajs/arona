@@ -21,7 +21,7 @@ const app = new Elysia()
 	.get('/', 'Arona')
 	.get('/heath', 'ok')
 	.patch('/database/index', async ({ headers }) => {
-		if (headers['x-api-key'] !== (process.env['api-key'] ?? 'Blue Archive'))
+		if (headers['x-api-key'] !== (process.env['api_key'] ?? 'Blue Archive'))
 			throw new NotFoundError()
 
 		await structure()
