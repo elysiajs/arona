@@ -1,0 +1,16 @@
+services:
+  pg:
+    container_name: arona_pg
+    image: pgvector/pgvector:pg18-trixie
+    network_mode: host
+    environment:
+      POSTGRES_PASSWORD: 12345678
+
+  dragonfly:
+    container_name: arona_dragonfly
+    image: docker.dragonflydb.io/dragonflydb/dragonfly
+    ulimits:
+      memlock: -1
+    network_mode: host
+    environment:
+      requirepass: 12345678
