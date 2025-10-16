@@ -101,7 +101,10 @@ const app = new Elysia()
 			})
 		}
 	)
-	.listen(process.env.PORT ?? 3000)
+	.listen({
+		port: process.env.PORT ?? 3000,
+		host: '0.0.0.0'
+	})
 
 console.log(
 	`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
