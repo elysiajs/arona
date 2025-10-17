@@ -59,6 +59,12 @@ const app = new Elysia()
 	.use(turnstile)
 	.get('/', 'Arona')
 	.get('/heath', 'ok')
+	.get('/test/__/stream', async function*() {
+		for (let i = 0; i < 1000; i++) {
+			yield `Chunk ${i}\n`
+			await Bun.sleep(10)
+		}
+	})
 	.patch('/database/index', async ({ headers }) => {
 		if (
 			process.env.NODE_ENV === 'development' ||
