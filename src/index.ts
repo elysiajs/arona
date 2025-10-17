@@ -2,7 +2,7 @@ import { Elysia, NotFoundError, t } from 'elysia'
 import { openapi, fromTypes } from '@elysiajs/openapi'
 import { cors } from '@elysiajs/cors'
 import { cron } from '@elysiajs/cron'
-import { opentelemetry } from '@elysiajs/opentelemetry'
+import { opentelemetry, record } from '@elysiajs/opentelemetry'
 
 import {
 	openai,
@@ -68,49 +68,57 @@ const app = new Elysia()
 	.post(
 		'/ask',
 		async function* ({ body: { message, history } }) {
-			const embeddings = await openai.embeddings.create({
-				model: 'text-embedding-3-small',
-				input:
-					history
-						?.map((x) =>
-							x.content.length > 4096
-								? x.content.slice(0, 4096)
-								: x.content
-						)
-						.join('\n\n') + message
-			})
+			const embeddings = await record('Create Embedding', () =>
+				openai.embeddings.create({
+					model: 'text-embedding-3-small',
+					input:
+						history
+							?.map((x) =>
+								x.content.length > 4096
+									? x.content.slice(0, 4096)
+									: x.content
+							)
+							.join('\n\n') + message
+				})
+			)
 
-			let references = await sql
-				.unsafe<Reference[]>(
-					`SELECT link, file, title, content, embedding <#> $1 AS distance
+			let references = await record('Retrieve Embedding', () =>
+				sql
+					.unsafe<Reference[]>(
+						`SELECT link, file, title, content, embedding <#> $1 AS distance
 				     FROM doc_chunks
 				     ORDER BY embedding <#> $1
 				     LIMIT 16`,
-					[`[${embeddings.data[0].embedding.join(',')}]`]
-				)
-				.then((x) => x.filter((a) => Math.abs(a.distance) > 0.45))
+						[`[${embeddings.data[0].embedding.join(',')}]`]
+					)
+					.then((x) => x.filter((a) => Math.abs(a.distance) > 0.45))
+			)
 
-			const response = openai.chat.completions.stream({
-				model: 'gpt-4o',
-				messages: [
-					{
-						role: 'system',
-						content: createInstruction(references)
-					},
-					...(history ?? []),
-					{
-						role: 'user',
-						content: history?.length
-							? message
-							: `${message}${openingPrompt}`
-					}
-				]
+			const response = record('OpenAPI Request', () =>
+				openai.chat.completions.stream({
+					model: 'gpt-4o',
+					messages: [
+						{
+							role: 'system',
+							content: createInstruction(references)
+						},
+						...(history ?? []),
+						{
+							role: 'user',
+							content: history?.length
+								? message
+								: `${message}${openingPrompt}`
+						}
+					]
+				})
+			)
+
+			return record('Stream Response', async function* () {
+				for await (const chunk of response) {
+					const content = chunk.choices[0]?.delta?.content
+					if (content) yield content
+				}
 			})
-
-			for await (const chunk of response) {
-				const content = chunk.choices[0]?.delta?.content
-				if (content) yield content
-			}
 
 			// if (references.length)
 			// 	yield '\n\nSource:\n' +
