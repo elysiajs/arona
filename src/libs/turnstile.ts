@@ -10,7 +10,7 @@ const ipLimiter = new RateLimiterMemory({
 })
 
 const aiLimiter = new RateLimiterMemory({
-	points: 5,
+	points: 6,
 	duration: 30
 })
 
