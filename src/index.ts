@@ -1,6 +1,7 @@
 import { Elysia, NotFoundError, t } from 'elysia'
 import { openapi, fromTypes } from '@elysiajs/openapi'
 import { cors } from '@elysiajs/cors'
+import { cron } from '@elysiajs/cron'
 
 import {
 	openai,
@@ -22,6 +23,13 @@ const app = new Elysia()
 	.use(
 		cors({
 			origin: ['https://elysiajs.com', 'http://localhost:5173']
+		})
+	)
+	.use(
+		cron({
+			name: 'Reindex Database',
+			pattern: '0 */6 * * *',
+			run: structure
 		})
 	)
 	.use(turnstile)
@@ -84,7 +92,6 @@ const app = new Elysia()
 				const content = chunk.choices[0]?.delta?.content
 				if (content) yield content
 			}
-
 
 			if (references.length)
 				yield '\n\nSource:\n' +
