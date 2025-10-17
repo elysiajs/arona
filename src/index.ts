@@ -92,7 +92,7 @@ const app = new Elysia()
 
 			const response = openai.chat.completions.stream({
 				model: 'gpt-5-nano',
-				reasoning_effort: 'medium',
+				reasoning_effort: 'low',
 				messages: [
 					{
 						role: 'system',
