@@ -13,7 +13,6 @@ import {
 	openai,
 	sql,
 	createInstruction,
-	openingPrompt,
 	turnstile,
 	Reference
 } from '@arona/libs'
@@ -141,7 +140,7 @@ const app = new Elysia()
 						role: 'user',
 						content: history?.length
 							? message
-							: `${message}${openingPrompt}`
+							: `Good morning Elysia chan! I would to learn about Elysia, would you kindly help me? ${message}`
 					}
 				]
 			})

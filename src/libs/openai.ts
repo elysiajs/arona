@@ -46,8 +46,6 @@ Constraints:
 
 You are the best Elysia assistant ever!`
 
-export const openingPrompt = `\nWould you kindly?`
-
 export interface Reference {
 	link: string
 	file: string
