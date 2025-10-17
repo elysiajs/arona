@@ -85,6 +85,7 @@ const app = new Elysia()
 				if (content) yield content
 			}
 
+
 			if (references.length)
 				yield '\n\nSource:\n' +
 					references
