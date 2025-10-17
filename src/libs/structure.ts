@@ -132,7 +132,7 @@ export const structure = () =>
 				file.replace('docs/', '').replace('.md', '') +
 				'#' +
 				title
-					.replace(/[^a-zA-Z ]/g, '')
+					.replace(/[^a-zA-Z -]/g, '')
 					.split('-')
 					.filter((x) => x.trim())
 					.join('-')
@@ -203,7 +203,7 @@ export const structure = () =>
 
 				const embedding = await openai.embeddings.create({
 					model: 'text-embedding-3-small',
-					input: chapters.map((c) => c.content)
+					input: chapters.map((c) => `${c.title}\n${c.file.slice(5, -3)}${c.content}`)
 				})
 
 				if (embedding) {

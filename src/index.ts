@@ -63,7 +63,7 @@ const app = new Elysia()
 	.use(turnstile)
 	.get('/', 'Arona')
 	.get('/heath', 'ok')
-	.get('/test/__/stream', async function*() {
+	.get('/test/__/stream', async function* () {
 		for (let i = 0; i < 1000; i++) {
 			yield `Chunk ${i}\n`
 			await Bun.sleep(10)
@@ -107,7 +107,7 @@ const app = new Elysia()
 							`SELECT link, file, title, content, embedding <#> $1 AS distance
 				     FROM doc_chunks
 				     ORDER BY embedding <#> $1
-				     LIMIT 16`,
+				     LIMIT 30`,
 							[`[${embeddings.data[0].embedding.join(',')}]`]
 						)
 						.then((x) =>
@@ -115,12 +115,31 @@ const app = new Elysia()
 						)
 			)
 
+
+			let additionalContext: string | undefined
+
+			if (Math.abs(references[0].distance) > 0.575) {
+				const chapters = await sql<
+					Pick<Reference, 'content' | 'link'>[]
+				>`SELECT content, link
+			     	FROM doc_chunks
+			     	WHERE file = ${references[0].file}`
+
+				if (chapters.length)
+					additionalContext =
+						'\n\nRelated:\n' +
+						chapters
+							.map((c) => `${c.link}\n${c.content}`)
+							.join('\n\n')
+			}
+
 			const response = openai.chat.completions.stream({
 				model: 'gpt-4o',
 				messages: [
 					{
 						role: 'system',
-						content: createInstruction(references)
+						content:
+							createInstruction(references) + additionalContext
 					},
 					...(history ?? []),
 					{
