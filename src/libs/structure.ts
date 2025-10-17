@@ -14,6 +14,16 @@ if (!url) throw new Error('DATABASE_URL is not set')
 const dbRoot = url.slice(0, url.indexOf('/', 12))
 const dbName = url.slice(url.indexOf('/', 12) + 1)
 
+const titleWeight = {
+	essential: 1,
+	blog: 0.8,
+	eden: 0.7,
+	unknown: 0.5,
+	migrate: 0.4,
+	integration: 0.35,
+	tutorial: 0.3
+} as const
+
 export const structure = () =>
 	record('index', async () => {
 		const rootSQL = new SQL(dbRoot)
@@ -26,9 +36,15 @@ export const structure = () =>
 		await sql`CREATE TABLE IF NOT EXISTS doc_chunks (
 		link VARCHAR(255) PRIMARY KEY,
 	   	file VARCHAR(255) NOT NULL,
+		file_name VARCHAR(255) GENERATED ALWAYS AS (
+		  regexp_replace(file, '.*/|\\.[^.]+$', '', 'g')
+		) STORED,
 	    title VARCHAR(255) NOT NULL,
 	  	content TEXT NOT NULL,
-	  	embedding VECTOR(1536)
+		weight FLOAT NOT NULL DEFAULT 0.5,
+	  	embedding VECTOR(1536) NOT NULL,
+		title_embedding VECTOR(1536) NOT NULL,
+		file_name_embedding VECTOR(1536) NOT NULL
 	);`
 		await sql`CREATE INDEX doc_chunks_file_idx ON doc_chunks (file);`.catch(
 			() => {}
@@ -61,6 +77,7 @@ export const structure = () =>
 				markdown === 'docs/index.md' ||
 				markdown.includes('/playground') ||
 				markdown.includes('/docs/migrate/index.md') ||
+				markdown.includes('/cheat-sheet.md') ||
 				(markdown.includes('/blog') &&
 					!markdown.includes('/blog/openapi-type-gen'))
 			)
@@ -180,7 +197,8 @@ export const structure = () =>
 
 				if (existIndex === -1) chapters.push(newChapter)
 				else if (
-					currentChapters[existIndex].content !== newChapter.content
+					true
+					// currentChapters[existIndex].content !== newChapter.content
 				)
 					chapters.push(newChapter)
 			}
@@ -203,36 +221,70 @@ export const structure = () =>
 
 				const embedding = await openai.embeddings.create({
 					model: 'text-embedding-3-small',
-					input: chapters.map((c) => `${c.title}\n${c.file.slice(5, -3)}${c.content}`)
+					input: [
+						...chapters.map((c) => c.content),
+						...chapters.map((c) => {
+							const subTitle = c.file.split('/')[1]
+
+							return `${subTitle} ${c.title}`
+						}),
+						...chapters.map((c) =>
+							c.file.slice(c.file.lastIndexOf('/') + 1, -3)
+						)
+					]
 				})
 
 				if (embedding) {
 					const values = <unknown[]>[]
 					let sqlValues = ''
-					for (let i = 0; i < chapters.length; i++) {
+					const groups = embedding.data.length / 3
+
+					function makeSqlValues(i: number, count: number): string {
+						const start = i * count + 1
+						const placeholders = Array.from(
+							{ length: count },
+							(_, j) => `$${start + j}`
+						)
+						return `(${placeholders.join(', ')})`
+					}
+
+					for (let i = 0; i < groups; i++) {
 						if (i) sqlValues += ', '
 
 						const embed = embedding.data[i].embedding
-						const { title, link, content, file } = chapters[i]
+						const titleEmbed = embedding.data[i + groups].embedding
+						const fileEmbed =
+							embedding.data[i + groups * 2].embedding
 
-						sqlValues += `($${i * 5 + 1}, $${i * 5 + 2}, $${i * 5 + 3}, $${i * 5 + 4}, $${i * 5 + 5})`
+						const { title, link, content, file } = chapters[i]
+						const subTitle = file.split('/')[1] || 'unknown'
+
+						sqlValues += makeSqlValues(i, 8)
 						values.push(
 							link,
 							file,
 							title,
 							content,
-							`[${embed.join(',')}]`
+							titleWeight[subTitle as keyof typeof titleWeight] ||
+								titleWeight.unknown,
+							`[${embed.join(',')}]`,
+							`[${titleEmbed.join(',')}]`,
+							`[${fileEmbed.join(',')}]`
 						)
 					}
 
 					if (!values.length) return
 
-					const query = `INSERT INTO doc_chunks (link, file, title, content, embedding)
+					const query = `INSERT INTO doc_chunks (link, file, title, content, weight, embedding, title_embedding, file_name_embedding)
 					VALUES ${sqlValues}
 					ON CONFLICT (link)
 					DO UPDATE SET
 					   	content = EXCLUDED.content,
-					   	embedding = EXCLUDED.embedding;`
+					   	embedding = EXCLUDED.embedding,
+						weight = EXCLUDED.weight,
+						title_embedding = EXCLUDED.title_embedding,
+						file_name_embedding = EXCLUDED.file_name_embedding
+						;`
 
 					await sql.unsafe(query, values)
 				} else {

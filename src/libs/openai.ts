@@ -52,8 +52,13 @@ export interface Reference {
 	file: string
 	title: string
 	content: string
-	distance: number
+	score: number
 }
 
-export const createInstruction = (references: Reference[]) =>
-	`${instruction}\n\nReferences:\n${references.map((reference) => `## ${reference.title}\n${reference.content}`).join('\n\n')}`
+export const createInstruction = (references: Reference[]) => {
+	const instrution = `${instruction}\n\nReferences:\n${references.map((reference) => `## ${reference.title}\n${reference.content}`).join('\n\n')}`
+
+	if (instruction.length < 131072) return instrution
+
+	return instruction.slice(0, 131072)
+}
