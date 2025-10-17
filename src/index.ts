@@ -69,7 +69,7 @@ const app = new Elysia()
 				     LIMIT 16`,
 					[`[${embeddings.data[0].embedding.join(',')}]`]
 				)
-				.then((x) => x.filter((a) => Math.abs(a.distance) > 0.375))
+				.then((x) => x.filter((a) => Math.abs(a.distance) > 0.45))
 
 			const response = openai.chat.completions.stream({
 				model: 'gpt-4o',
@@ -93,14 +93,14 @@ const app = new Elysia()
 				if (content) yield content
 			}
 
-			if (references.length)
-				yield '\n\nSource:\n' +
-					references
-						.map(
-							(reference) =>
-								`- [${reference.file.slice(5, -3)} - ${reference.title}](https://elysiajs.com/${reference.link})`
-						)
-						.join('\n')
+			// if (references.length)
+			// 	yield '\n\nSource:\n' +
+			// 		references
+			// 			.map(
+			// 				(reference) =>
+			// 					`- [${reference.file.slice(5, -3)} - ${reference.title}](https://elysiajs.com/${reference.link})`
+			// 			)
+			// 			.join('\n')
 		},
 		{
 			turnstile: true,

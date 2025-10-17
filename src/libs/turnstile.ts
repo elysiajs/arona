@@ -5,7 +5,7 @@ if (!process.env.TURNSTILE_SECRET)
 	throw new Error('TURNSTILE_SECRET is not set')
 
 const ipLimiter = new RateLimiterMemory({
-	points: 7,
+	points: 8,
 	duration: 35
 })
 
