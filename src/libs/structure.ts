@@ -37,6 +37,9 @@ export const structure = async () => {
 
 	console.log('Database structure setup completed')
 
+	if (process.env.NODE_ENV === 'production')
+		rmdir('docs', { recursive: true }).catch(() => {})
+
 	await Bun.$`git clone --depth 1 --single-branch --branch main https://github.com/elysiajs/documentation docs`.catch(
 		() => {}
 	)
@@ -272,5 +275,6 @@ export const structure = async () => {
 
 	console.log('Data insertion completed')
 
-	// rmdir('docs', { recursive: true })
+	if (process.env.NODE_ENV === 'production')
+		rmdir('docs', { recursive: true })
 }

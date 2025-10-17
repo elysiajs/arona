@@ -43,7 +43,7 @@ const app = new Elysia()
 		async function* ({ body: { message, history } }) {
 			const embeddings = await openai.embeddings.create({
 				model: 'text-embedding-3-small',
-				input: message
+				input: history?.map((x) => x.content) + `user: ${message}`
 			})
 
 			let references = await sql
