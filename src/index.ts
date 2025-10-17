@@ -33,9 +33,9 @@ const app = new Elysia()
 			run: structure
 		})
 	)
-	.headers({
-		'x-powered-by': 'Elysia'
-	})
+	// .headers({
+	// 	'x-powered-by': 'Elysia'
+	// })
 	.use(turnstile)
 	.get('/', 'arona')
 	.get('/heath', 'ok')
