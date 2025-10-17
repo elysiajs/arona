@@ -151,7 +151,7 @@ LIMIT 15;`,
 
 			const response = openai.chat.completions.stream({
 				model: 'gpt-5-nano',
-				reasoning_effort: 'low',
+				reasoning_effort: 'medium',
 				messages: [
 					{
 						role: 'system',
