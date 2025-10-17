@@ -56,7 +56,6 @@ const app = new Elysia()
 		})
 	)
 	.headers({
-		'transfer-encoding': 'chunked',
 		'x-powered-by': 'Elysia'
 	})
 	.use(turnstile)
