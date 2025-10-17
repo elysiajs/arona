@@ -11,9 +11,6 @@
 		"@elysiajs/cors": "^1.4.0",
 		"@elysiajs/cron": "^1.4.1",
 		"@elysiajs/openapi": "^1.4.11",
-		"@elysiajs/opentelemetry": "^1.4.1",
-		"@opentelemetry/exporter-trace-otlp-proto": "^0.206.0",
-		"@opentelemetry/sdk-trace-node": "^2.1.0",
 		"elysia": "^1.4.11",
 		"openai": "^6.3.0",
 		"rate-limiter-flexible": "^8.1.0"

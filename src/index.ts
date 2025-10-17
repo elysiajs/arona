@@ -2,12 +2,6 @@ import { Elysia, NotFoundError, t } from 'elysia'
 import { openapi, fromTypes } from '@elysiajs/openapi'
 import { cors } from '@elysiajs/cors'
 import { cron } from '@elysiajs/cron'
-import {
-	getTracer,
-	opentelemetry,
-	record,
-	startActiveSpan
-} from '@elysiajs/opentelemetry'
 
 import {
 	openai,
@@ -18,29 +12,13 @@ import {
 } from '@arona/libs'
 import { structure } from './libs/structure'
 
-import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-node'
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
+import { findEmbedding } from './libs/sql'
 
 const app = new Elysia()
 	.use(
 		openapi({
 			enabled: process.env.NODE_ENV !== 'production',
 			references: fromTypes()
-		})
-	)
-	.use(
-		opentelemetry({
-			spanProcessors: [
-				new BatchSpanProcessor(
-					new OTLPTraceExporter({
-						url: 'https://api.axiom.co/v1/traces',
-						headers: {
-							Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
-							'X-Axiom-Dataset': process.env.AXIOM_DATASET!
-						}
-					})
-				)
-			]
 		})
 	)
 	.use(
@@ -75,62 +53,25 @@ const app = new Elysia()
 	.post(
 		'/ask',
 		async function* ({ body: { message, history } }) {
-			const embeddings = await record(
-				'Create Embedding',
-				async () =>
-					await openai.embeddings.create({
-						model: 'text-embedding-3-small',
-						input:
-							message +
-							'\n\n' +
-							history
-								?.map((x) =>
-									x.content.length > 4096
-										? x.content.slice(0, 4096)
-										: x.content
-								)
-								.join('\n\n')
-					})
-			)
-
-			let references = await record(
-				'Retrieve Embedding',
-				async () =>
-					await sql
-						.unsafe<Reference[]>(
-							`WITH q AS (SELECT $1::vector AS embedding)
-SELECT
-  d.link,
-  d.file,
-  d.title,
-  d.content,
-  (
-    ABS(
-      (
-        (
-          0.125 * (d.title_embedding <#> q.embedding) +
-          0.6 * (d.embedding       <#> q.embedding) +
-          0.1 * (d.file_name_embedding  <#> q.embedding) +
-          0.175 * d.weight * - 1
-        )
-      )
-    )
-  ) AS score
-FROM doc_chunks as d, q
-ORDER BY score DESC
-LIMIT 15;`,
-							[`[${embeddings.data[0].embedding.join(',')}]`]
+			const embeddings = await openai.embeddings.create({
+				model: 'text-embedding-3-small',
+				input:
+					message +
+					'\n\n' +
+					history
+						?.map((x) =>
+							x.content.length > 4096
+								? x.content.slice(0, 4096)
+								: x.content
 						)
-						.then((x) => x.filter((r) => r.score >= 0.35))
-			)
+						.join('\n\n')
+			})
 
-			// console.log(
-			// 	references.map((x) => ({
-			// 		title: x.title,
-			// 		distance: x.score,
-			// 		file: x.file
-			// 	}))
-			// )
+			let references = await sql
+				.unsafe<
+					Reference[]
+				>(findEmbedding, [`[${embeddings.data[0].embedding.join(',')}]`])
+				.then((x) => x.filter((r) => r.score >= 0.35))
 
 			let additionalContext = ''
 
@@ -168,16 +109,10 @@ LIMIT 15;`,
 				]
 			})
 
-			const tracer = getTracer()
-
-			const span = tracer.startSpan('Stream Response')
-
 			for await (const chunk of response) {
 				const content = chunk.choices[0]?.delta?.content
 				if (content) yield content
 			}
-
-			span.end()
 
 			const sources = references.filter((x) => x.score >= 0.5).slice(0, 5)
 
@@ -192,6 +127,7 @@ LIMIT 15;`,
 		},
 		{
 			turnstile: true,
+			AIRateLimit: true,
 			headers: 'turnstile',
 			body: t.Object({
 				message: t.String({
