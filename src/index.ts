@@ -63,12 +63,6 @@ const app = new Elysia()
 	.use(turnstile)
 	.get('/', 'Arona')
 	.get('/heath', 'ok')
-	.get('/test/__/stream', async function* () {
-		for (let i = 0; i < 1000; i++) {
-			yield `Chunk ${i}\n`
-			await Bun.sleep(10)
-		}
-	})
 	.patch('/database/index', async ({ headers }) => {
 		if (
 			process.env.NODE_ENV === 'development' ||
@@ -115,21 +109,20 @@ const app = new Elysia()
 						)
 			)
 
-
 			let additionalContext: string | undefined
 
 			if (Math.abs(references[0].distance) > 0.575) {
 				const chapters = await sql<
-					Pick<Reference, 'content' | 'link'>[]
-				>`SELECT content, link
+					Pick<Reference, 'content' | 'title'>[]
+				>`SELECT content, title
 			     	FROM doc_chunks
 			     	WHERE file = ${references[0].file}`
 
 				if (chapters.length)
 					additionalContext =
-						'\n\nRelated:\n' +
+						`# ${references[0].file.slice(5, -3)}\n\n` +
 						chapters
-							.map((c) => `${c.link}\n${c.content}`)
+							.map((c) => `## ${c.title}\n${c.content}`)
 							.join('\n\n')
 			}
 
@@ -139,7 +132,9 @@ const app = new Elysia()
 					{
 						role: 'system',
 						content:
-							createInstruction(references) + additionalContext
+							createInstruction(references) +
+							'\n\n' +
+							additionalContext
 					},
 					...(history ?? []),
 					{
