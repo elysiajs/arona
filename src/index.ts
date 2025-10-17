@@ -56,6 +56,10 @@ const app = new Elysia()
 			run: structure
 		})
 	)
+	.headers({
+		'transfer-encoding': 'chunked',
+		'x-powered-by': 'Elysia'
+	})
 	.use(turnstile)
 	.get('/', 'Arona')
 	.get('/heath', 'ok')
@@ -94,8 +98,6 @@ const app = new Elysia()
 								.join('\n\n') + message
 					})
 			)
-
-			console.log(embeddings.data[0].embedding.join(','))
 
 			let references = await record(
 				'Retrieve Embedding',
