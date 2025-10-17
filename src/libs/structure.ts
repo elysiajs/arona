@@ -21,11 +21,15 @@ export const structure = async () => {
 	await sql`CREATE EXTENSION IF NOT EXISTS vector;`
 	// await sql`DROP TABLE IF EXISTS doc_chunks;`
 	await sql`CREATE TABLE IF NOT EXISTS doc_chunks (
-	   	file VARCHAR(255) PRIMARY KEY,
+		link VARCHAR(255) PRIMARY KEY,
+	   	file VARCHAR(255) NOT NULL,
 	    title VARCHAR(255) NOT NULL,
 	  	content TEXT NOT NULL,
 	  	embedding VECTOR(1536)
 	);`
+	await sql`CREATE INDEX doc_chunks_file_idx ON doc_chunks (file);`.catch(
+		() => {}
+	)
 	await sql`CREATE INDEX ON doc_chunks USING ivfflat (embedding vector_l2_ops) WITH (lists = 100);`.catch(
 		() => {}
 	)
@@ -97,49 +101,148 @@ export const structure = async () => {
 
 		totalOps++
 
-		const currentDatas = await sql.unsafe(
+		const currentFiles = await sql.unsafe<Chunk[]>(
 			`SELECT file, content FROM doc_chunks WHERE file IN (${chunk.map((c) => `'${c.file}'`).join(', ')})`
 		)
 
-		for (const data of currentDatas) {
-			const index = chunk.findIndex((c) => c.file === data.file)
-			if (index !== -1 && chunk[index].content === data.content)
-				chunk.splice(index, 1)
+		function format(x: string) {
+			const sep = x.indexOf('\n')
+			const title =
+				sep === -1 ? x : x.slice(0, sep).replace(/#/g, '').trimStart()
+
+			return {
+				title,
+				content: x
+			}
 		}
 
-		if (!chunk.length) return
+		const headerToLink = (file: string, title: string) =>
+			file.replace('docs/', '').replace('.md', '') +
+			'#' +
+			title
+				.replace(/[^a-zA-Z ]/g, '')
+				.split('-')
+				.filter((x) => x.trim())
+				.join('-')
+				.replace(/ /g, '-')
+				.toLowerCase()
+				.trim()
 
-		console.log(chunk.map((a) => a.file).join(','), 'need to update')
+		const notTag = (title: string) =>
+			!title.startsWith('<') && !title.endsWith('>')
 
-		const embedding = await openai.embeddings.create({
-			model: 'text-embedding-3-small',
-			input: chunk.map((c) => c.content)
-		})
+		const index = (z: Chunk[]) =>
+			z
+				.flatMap((x) =>
+					x.content
+						.split('\n## ')
+						.map(format)
+						.filter((x) => notTag(x.title))
+						.map((c) => ({
+							...x,
+							...c,
+							link: headerToLink(x.file, c.title)
+						}))
+				)
+				//remove duplicate link
+				.filter(
+					(x, i, a) => a.findIndex((y) => y.link === x.link) === i
+				)
 
-		if (!embedding) throw new Error('Failed to get embeddings')
+		const newChapters = index(chunk).filter(
+			(x) =>
+				!x.file.includes('tutorial/') ||
+				(x.file.includes('tutorial/') &&
+					!x.title.includes('#assignment'))
+		)
 
-		const values = <unknown[]>[]
-		let sqlValues = ''
-		for (let i = 0; i < chunk.length; i++) {
-			if (i) sqlValues += ', '
+		const currentChapters = index(currentFiles)
 
-			const embed = embedding.data[i].embedding
-			const { file, title, content } = chunk[i]
+		const chapters: typeof newChapters = []
+		const toRemove: typeof currentChapters = []
 
-			sqlValues += `($${i * 4 + 1}, $${i * 4 + 2}, $${i * 4 + 3}, $${i * 4 + 4})`
-			values.push(file, title, content, `[${embed.join(',')}]`)
+		for (const newChapter of newChapters) {
+			const existIndex = currentChapters.findIndex(
+				(c) => c.link === newChapter.link
+			)
+
+			if (existIndex === -1) chapters.push(newChapter)
+			else if (currentChapters[existIndex].content !== newChapter.content)
+				chapters.push(newChapter)
 		}
 
-		if (!values.length) return
+		for (const currentChapter of currentChapters) {
+			const existIndex = newChapters.findIndex(
+				(c) => c.title === currentChapter.title
+			)
 
-		const query = `INSERT INTO doc_chunks (file, title, content, embedding)
-		VALUES ${sqlValues}
-		ON CONFLICT (file)
-		DO UPDATE SET
-		   	content = EXCLUDED.content,
-		   	embedding = EXCLUDED.embedding;`
+			if (existIndex === -1) toRemove.push(currentChapter)
+		}
 
-		await sql.unsafe(query, values)
+		if (!chapters.length && !toRemove.length) return
+
+		if (chapters.length) {
+			console.log(
+				'update',
+				chapters.map((a) => a.link)
+			)
+
+			const embedding = await openai.embeddings.create({
+				model: 'text-embedding-3-small',
+				input: chapters.map((c) => c.content)
+			})
+
+			if (embedding) {
+				const values = <unknown[]>[]
+				let sqlValues = ''
+				for (let i = 0; i < chapters.length; i++) {
+					if (i) sqlValues += ', '
+
+					const embed = embedding.data[i].embedding
+					const { title, link, content, file } = chapters[i]
+
+					sqlValues += `($${i * 5 + 1}, $${i * 5 + 2}, $${i * 5 + 3}, $${i * 5 + 4}, $${i * 5 + 5})`
+					values.push(
+						link,
+						file,
+						title,
+						content,
+						`[${embed.join(',')}]`
+					)
+				}
+
+				if (!values.length) return
+
+				const query = `INSERT INTO doc_chunks (link, file, title, content, embedding)
+					VALUES ${sqlValues}
+					ON CONFLICT (link)
+					DO UPDATE SET
+					   	content = EXCLUDED.content,
+					   	embedding = EXCLUDED.embedding;`
+
+				await sql.unsafe(query, values)
+			} else {
+				console.error(
+					'Failed to create embeddings for batch',
+					chapters.map((a) => a.link).join(',')
+				)
+			}
+		}
+
+		if (toRemove.length) {
+			console.log(
+				'remove',
+				toRemove.map((a) => a.link)
+			)
+
+			const query = `DELETE FROM doc_chunks WHERE link IN (${toRemove
+				.map((c) => `'${c.link}'`)
+				.join(', ')});`
+
+			await sql.unsafe(query).catch(() => {
+				console.log('Failed to remove', query)
+			})
+		}
 	}
 
 	let totalOps = 0
@@ -169,5 +272,5 @@ export const structure = async () => {
 
 	console.log('Data insertion completed')
 
-	rmdir('docs', { recursive: true })
+	// rmdir('docs', { recursive: true })
 }

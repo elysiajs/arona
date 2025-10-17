@@ -46,13 +46,15 @@ const app = new Elysia()
 				input: message
 			})
 
-			const references: Reference[] = await sql.unsafe(
-				`SELECT file, title, content, embedding <#> $1 AS distance
+			let references = await sql
+				.unsafe<Reference[]>(
+					`SELECT link, file, title, content, embedding <#> $1 AS distance
 				     FROM doc_chunks
 				     ORDER BY embedding <#> $1
-				     LIMIT 5`,
-				[`[${embeddings.data[0].embedding.join(',')}]`]
-			)
+				     LIMIT 16`,
+					[`[${embeddings.data[0].embedding.join(',')}]`]
+				)
+				.then((x) => x.filter((a) => Math.abs(a.distance) > 0.375))
 
 			const response = openai.chat.completions.stream({
 				model: 'gpt-4o',
@@ -65,8 +67,8 @@ const app = new Elysia()
 					{
 						role: 'user',
 						content: history?.length
-							? `${message}${openingPrompt}`
-							: message
+							? message
+							: `${message}${openingPrompt}`
 					}
 				]
 			})
@@ -76,13 +78,14 @@ const app = new Elysia()
 				if (content) yield content
 			}
 
-			yield '\n\nSource:\n' +
-				references
-					.map(
-						(reference) =>
-							`- [${reference.title}](https://elysiajs.com/${reference.file.slice(5, -3)})`
-					)
-					.join('\n')
+			if (references.length)
+				yield '\n\nSource:\n' +
+					references
+						.map(
+							(reference) =>
+								`- [${reference.file.slice(5, -3)} - ${reference.title}](https://elysiajs.com/${reference.link})`
+						)
+						.join('\n')
 		},
 		{
 			turnstile: true,

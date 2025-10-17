@@ -40,6 +40,7 @@ Constraints:
 export const openingPrompt = `\nWould you kindly explain, summarize the concept, and answer any follow-up questions I have?`
 
 export interface Reference {
+	link: string
 	file: string
 	title: string
 	content: string
@@ -47,4 +48,4 @@ export interface Reference {
 }
 
 export const createInstruction = (references: Reference[]) =>
-	`${instruction}\n\nReferences:\n${references.map((reference) => `Reference: https://elysiajs.com/${reference.file.slice(5, -3)} (Weight: ${reference.distance})\n${reference.content}`).join('\n---\n')}`
+	`${instruction}\n\nReferences:\n${references.map((reference) => `${reference.file.slice(reference.file.lastIndexOf('/'))} - ${reference.title} (Weight: ${reference.distance})\n${reference.content}`).join('\n---\n')}`
