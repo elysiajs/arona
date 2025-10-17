@@ -2,6 +2,7 @@ import { Elysia, NotFoundError, t } from 'elysia'
 import { openapi, fromTypes } from '@elysiajs/openapi'
 import { cors } from '@elysiajs/cors'
 import { cron } from '@elysiajs/cron'
+import { opentelemetry } from '@elysiajs/opentelemetry'
 
 import {
 	openai,
@@ -13,11 +14,29 @@ import {
 } from '@arona/libs'
 import { structure } from './libs/structure'
 
+import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-node'
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
+
 const app = new Elysia()
 	.use(
 		openapi({
 			enabled: process.env.NODE_ENV !== 'production',
 			references: fromTypes()
+		})
+	)
+	.use(
+		opentelemetry({
+			spanProcessors: [
+				new BatchSpanProcessor(
+					new OTLPTraceExporter({
+						url: 'https://api.axiom.co/v1/traces',
+						headers: {
+							Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
+							'X-Axiom-Dataset': process.env.AXIOM_DATASET!
+						}
+					})
+				)
+			]
 		})
 	)
 	.use(
