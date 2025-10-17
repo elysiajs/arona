@@ -37,7 +37,7 @@ const app = new Elysia()
 		'x-powered-by': 'Elysia'
 	})
 	.use(turnstile)
-	.get('/', 'おはよう、先生！')
+	.get('/', 'arona')
 	.get('/heath', 'ok')
 	.patch('/database/index', async ({ headers }) => {
 		if (
