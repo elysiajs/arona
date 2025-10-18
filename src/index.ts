@@ -23,7 +23,7 @@ const app = new Elysia()
 	)
 	.use(
 		cors({
-			origin: 'https://elysiajs.com'
+			origin: ['http://localhost:5173', 'https://elysiajs.com']
 		})
 	)
 	.use(
