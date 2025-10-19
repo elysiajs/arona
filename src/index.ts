@@ -70,13 +70,10 @@ if (cluster.isPrimary) {
 						model: 'text-embedding-3-small',
 						input:
 							message +
-							'\n\n' +
+							(history?.length ? '\n\n' : '') +
 							history
-								?.map((x) =>
-									x.content.length > 4096
-										? x.content.slice(0, 4096)
-										: x.content
-								)
+								?.filter((x) => x.role === 'user')
+								.map((x) => x.content)
 								.join('\n\n')
 					})
 				)
