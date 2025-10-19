@@ -13,6 +13,7 @@ import {
 import { structure } from './libs/structure'
 
 import { findEmbedding } from './libs/sql'
+import { retry } from './libs/retry'
 
 const app = new Elysia()
 	.use(
@@ -33,9 +34,6 @@ const app = new Elysia()
 			run: structure
 		})
 	)
-	// .headers({
-	// 	'x-powered-by': 'Elysia'
-	// })
 	.use(turnstile)
 	.get('/', 'arona')
 	.get('/heath', 'ok')
@@ -54,19 +52,21 @@ const app = new Elysia()
 	.post(
 		'/ask',
 		async function* ({ body: { message, history } }) {
-			const embeddings = await openai.embeddings.create({
-				model: 'text-embedding-3-small',
-				input:
-					message +
-					'\n\n' +
-					history
-						?.map((x) =>
-							x.content.length > 4096
-								? x.content.slice(0, 4096)
-								: x.content
-						)
-						.join('\n\n')
-			})
+			const embeddings = await retry(() =>
+				openai.embeddings.create({
+					model: 'text-embedding-3-small',
+					input:
+						message +
+						'\n\n' +
+						history
+							?.map((x) =>
+								x.content.length > 4096
+									? x.content.slice(0, 4096)
+									: x.content
+							)
+							.join('\n\n')
+				})
+			)
 
 			let references = await sql
 				.unsafe<
@@ -91,24 +91,27 @@ const app = new Elysia()
 							.join('\n\n')
 			}
 
-			const response = openai.chat.completions.stream({
-				model: 'gpt-5-nano',
-				reasoning_effort: 'low',
-				messages: [
-					{
-						role: 'system',
-						content:
-							createInstruction(references) + additionalContext
-					},
-					...(history ?? []),
-					{
-						role: 'user',
-						content: history?.length
-							? message
-							: `Hi Elysia chan! I would to learn about Elysia, would you kindly help me? ${message}`
-					}
-				]
-			})
+			const response = await retry(() =>
+				openai.chat.completions.stream({
+					model: 'gpt-5-nano',
+					reasoning_effort: 'low',
+					messages: [
+						{
+							role: 'system',
+							content:
+								createInstruction(references) +
+								additionalContext
+						},
+						...(history ?? []),
+						{
+							role: 'user',
+							content: history?.length
+								? message
+								: `Hi Elysia chan! I would to learn about Elysia, would you kindly help me? ${message}`
+						}
+					]
+				})
+			)
 
 			for await (const chunk of response) {
 				const content = chunk.choices[0]?.delta?.content
