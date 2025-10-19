@@ -12,7 +12,11 @@ export const searchTool = tool({
 			examples: ['handler', 'OpenAPI type gen', 'Eden Treaty']
 		})
 	}),
-	execute: ({ sentence }) => search(sentence)
+	execute({ sentence }) {
+		console.log('Searching for:', sentence)
+
+		return search(sentence)
+	}
 })
 
 export const readPageTool = tool({
@@ -25,5 +29,9 @@ export const readPageTool = tool({
 			examples: ['/essential/handler', '/essential/life-cycle#transform']
 		})
 	}),
-	execute: ({ link }) => readPage(link)
+	execute({ link }) {
+		console.log('Reading page:', link)
+
+		return readPage(link)
+	}
 })

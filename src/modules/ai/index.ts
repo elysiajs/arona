@@ -78,7 +78,7 @@ export const ai = new Elysia()
 						t.Object({
 							role: t.UnionEnum(['user', 'assistant']),
 							content: t.String({
-								maxLength: 4096
+								maxLength: 16384
 							})
 						}),
 						{
