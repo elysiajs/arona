@@ -50,7 +50,6 @@ if (cluster.isPrimary) {
 		.use(turnstile)
 		.get('/', 'arona')
 		.get('/heath', 'ok')
-		.get('/arona/__test/headers', ({ headers }) => headers)
 		.patch('/database/index', async ({ headers }) => {
 			if (
 				process.env.NODE_ENV === 'development' ||

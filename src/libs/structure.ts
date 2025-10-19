@@ -192,8 +192,7 @@ export const structure = async () => {
 
 			if (existIndex === -1) chapters.push(newChapter)
 			else if (
-				true
-				// currentChapters[existIndex].content !== newChapter.content
+				currentChapters[existIndex].content !== newChapter.content
 			)
 				chapters.push(newChapter)
 		}
