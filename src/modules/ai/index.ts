@@ -1,6 +1,6 @@
 import { Elysia, NotFoundError, t } from 'elysia'
 
-import { streamText, smoothStream, stepCountIs } from 'ai'
+import { streamText, stepCountIs } from 'ai'
 
 import { model, structure, turnstile } from '@arona/libs'
 import { instruct, readPageTool, search, searchTool } from './libs'
@@ -31,7 +31,6 @@ export const ai = new Elysia()
 					readPage: readPageTool
 				},
 				stopWhen: stepCountIs(5),
-				experimental_transform: smoothStream(),
 				messages: [
 					{
 						role: 'system',
