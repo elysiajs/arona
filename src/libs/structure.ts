@@ -1,10 +1,10 @@
 import { SQL } from 'bun'
 import { rmdir } from 'fs/promises'
 
-import { OpenAI } from 'openai'
+import { embedMany } from 'ai'
 import Queue from 'p-queue'
 
-import { sql } from './database'
+import { openai, sql } from '@arona/libs'
 
 const url = process.env.DATABASE_URL
 if (!url) throw new Error('DATABASE_URL is not set')
@@ -108,10 +108,6 @@ export const structure = async () => {
 	const apiKey = process.env.OPENAI_API_KEY
 	if (!apiKey) throw new Error('OPENAI_API_KEY is not set')
 
-	const openai = new OpenAI({
-		apiKey
-	})
-
 	const queue = new Queue({
 		concurrency: 4,
 		interval: 1000,
@@ -211,9 +207,9 @@ export const structure = async () => {
 				chapters.map((a) => a.link)
 			)
 
-			const embedding = await openai.embeddings.create({
-				model: 'text-embedding-3-small',
-				input: [
+			const { embeddings } = await embedMany({
+				model: openai.textEmbeddingModel('text-embedding-3-small'),
+				values: [
 					...chapters.map((c) => c.content),
 					...chapters.map((c) => {
 						const subTitle = c.file.split('/')[1]
@@ -226,10 +222,10 @@ export const structure = async () => {
 				]
 			})
 
-			if (embedding) {
+			if (embeddings.length) {
 				const values = <unknown[]>[]
 				let sqlValues = ''
-				const groups = embedding.data.length / 3
+				const groups = embeddings.length / 3
 
 				function makeSqlValues(i: number, count: number): string {
 					const start = i * count + 1
@@ -243,9 +239,9 @@ export const structure = async () => {
 				for (let i = 0; i < groups; i++) {
 					if (i) sqlValues += ', '
 
-					const embed = embedding.data[i].embedding
-					const titleEmbed = embedding.data[i + groups].embedding
-					const fileEmbed = embedding.data[i + groups * 2].embedding
+					const embed = embeddings[i]
+					const titleEmbed = embeddings[i + groups]
+					const fileEmbed = embeddings[i + groups * 2]
 
 					const { title, link, content, file } = chapters[i]
 					const subTitle = file.split('/')[1] || 'unknown'

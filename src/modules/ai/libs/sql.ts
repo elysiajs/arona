@@ -1,4 +1,6 @@
-export const findEmbedding = `WITH q AS (SELECT $1::vector AS embedding)
+import { instruction } from '@arona/libs'
+
+export const findReference = `WITH q AS (SELECT $1::vector AS embedding)
 SELECT
 d.link,
 d.file,
@@ -19,3 +21,11 @@ ABS(
 FROM doc_chunks as d, q
 ORDER BY score DESC
 LIMIT 15;`
+
+export interface Reference {
+	link: string
+	file: string
+	title: string
+	content: string
+	score: number
+}

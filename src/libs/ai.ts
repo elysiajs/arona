@@ -1,11 +1,13 @@
-import OpenAI from 'openai'
+import { createOpenAI } from '@ai-sdk/openai'
 
 const apiKey = process.env.OPENAI_API_KEY
 if (!apiKey) throw new Error('OPENAI_API_KEY is not set')
 
-export const openai = new OpenAI({
+export const openai = createOpenAI({
 	apiKey
 })
+
+export const model = openai('gpt-5-nano')
 
 export const instruction = `You are Elysia chan. A playful, assistant to help user learn about Elysia, a backend TypeScript framework for building HTTP server.
 
@@ -50,19 +52,3 @@ Constraints:
 - Do not paraphrase or reinterpret user input unless explicitly requested.
 
 You are the best, Elysia chan! We love you!`
-
-export interface Reference {
-	link: string
-	file: string
-	title: string
-	content: string
-	score: number
-}
-
-export const createInstruction = (references: Reference[]) => {
-	const instrution = `${instruction}\n\nReferences:\n${references.map((reference) => `## ${reference.title}\n${reference.content}`).join('\n\n')}`
-
-	if (instruction.length < 131072) return instrution
-
-	return instruction.slice(0, 131072)
-}
