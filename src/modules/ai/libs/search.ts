@@ -1,7 +1,22 @@
 import { embed } from 'ai'
 
 import { sql, retry, openai } from '@arona/libs'
-import { findReference, type Reference } from './sql'
+import { findReference, type Reference, type DocFile } from './sql'
+
+export async function readPage(file: string) {
+	if (file.includes('://')) file = file.slice(file.indexOf('/') + 11)
+
+	if (file.includes('#'))
+		return sql<
+			DocFile[]
+		>`SELECT title, content FROM doc_chunks WHERE link = ${file} LIMIT = 1`.then(
+			(x) => x[0]
+		)
+
+	return sql<
+		DocFile[]
+	>`SELECT title, content FROM doc_chunks WHERE file = ${file}`
+}
 
 export async function search(value: string, abortSignal?: AbortSignal) {
 	const { embedding } = await retry(() =>

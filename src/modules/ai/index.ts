@@ -3,7 +3,7 @@ import { Elysia, NotFoundError, t } from 'elysia'
 import { streamText, smoothStream, stepCountIs } from 'ai'
 
 import { model, structure, turnstile } from '@arona/libs'
-import { instruct, search, searchTool } from './libs'
+import { instruct, readPageTool, search, searchTool } from './libs'
 
 export const ai = new Elysia()
 	.use(turnstile)
@@ -27,7 +27,8 @@ export const ai = new Elysia()
 				model,
 				abortSignal: request.signal,
 				tools: {
-					search: searchTool
+					search: searchTool,
+					readPage: readPageTool
 				},
 				stopWhen: stepCountIs(5),
 				experimental_transform: smoothStream(),

@@ -1,20 +1,29 @@
 import { tool } from 'ai'
 import z from 'zod'
 
-import { search } from './search'
+import { search, readPage } from './search'
 
 export const searchTool = tool({
 	name: 'search',
-	description:
-		'Find relevant information from Elysia documentation to answer user questions. Use this tool when you need to look up specific details, code examples, or explanations about Elysia framework features and functionalities.',
+	description: 'Find relevant information from Elysia documentation.',
 	inputSchema: z.object({
-		keyword: z
-			.string()
-			.describe('The keyword to search for in the Elysia documentation')
+		sentence: z.string().meta({
+			description: 'The keyword/sentence to search in the documentation',
+			examples: ['handler', 'OpenAPI type gen', 'Eden Treaty']
+		})
 	}),
-	execute: ({ keyword }) => {
-		console.log('search', keyword)
+	execute: ({ sentence }) => search(sentence)
+})
 
-		return search(keyword)
-	}
+export const readPageTool = tool({
+	name: 'read_page',
+	description: 'Read a specific page from Elysia documentation.',
+	inputSchema: z.object({
+		link: z.string().meta({
+			description:
+				'The link of the page to read from Elysia documentation',
+			examples: ['/essential/handler', '/essential/life-cycle#transform']
+		})
+	}),
+	execute: ({ link }) => readPage(link)
 })
