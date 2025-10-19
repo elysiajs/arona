@@ -1,6 +1,6 @@
 import { Elysia, NotFoundError, t } from 'elysia'
 
-import { stepCountIs, streamText } from 'ai'
+import { streamText, smoothStream, stepCountIs } from 'ai'
 
 import { model, structure, turnstile } from '@arona/libs'
 import { instruct, search, searchTool } from './libs'
@@ -30,6 +30,7 @@ export const ai = new Elysia()
 					search: searchTool
 				},
 				stopWhen: stepCountIs(5),
+				experimental_transform: smoothStream(),
 				messages: [
 					{
 						role: 'system',
@@ -42,7 +43,12 @@ export const ai = new Elysia()
 							? message
 							: `Hi Elysia chan! I would to learn about Elysia, would you kindly help me? ${message}`
 					}
-				]
+				],
+				providerOptions: {
+					openai: {
+						reasoningEffort: 'low'
+					}
+				}
 			})
 
 			for await (const content of response.textStream) yield content
