@@ -26,6 +26,14 @@ if (cluster.isPrimary) {
 		console.log(`Worker ${worker.process.pid} died, restarting...`)
 		cluster.fork()
 	})
+
+	new Elysia().use(
+		cron({
+			name: 'Reindex Database',
+			pattern: '0 */6 * * *',
+			run: structure
+		})
+	)
 } else
 	new Elysia()
 		.use(
@@ -37,13 +45,6 @@ if (cluster.isPrimary) {
 		.use(
 			cors({
 				origin: ['http://localhost:5173', 'https://elysiajs.com']
-			})
-		)
-		.use(
-			cron({
-				name: 'Reindex Database',
-				pattern: '0 */6 * * *',
-				run: structure
 			})
 		)
 		.use(turnstile)
