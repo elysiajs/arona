@@ -34,8 +34,8 @@ if (cluster.isPrimary) {
 			run: structure
 		})
 	)
-} else
-	new Elysia()
+} else {
+	const app = new Elysia()
 		.use(
 			openapi({
 				enabled: process.env.NODE_ENV !== 'production',
@@ -174,6 +174,7 @@ if (cluster.isPrimary) {
 			host: '0.0.0.0'
 		})
 
-console.log(
-	`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
-)
+	console.log(
+		`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
+	)
+}
