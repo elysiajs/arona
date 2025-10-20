@@ -1,5 +1,5 @@
 import { SQL } from 'bun'
-import { rmdir } from 'fs/promises'
+import { rmdir, stat } from 'fs/promises'
 
 import { embedMany } from 'ai'
 import Queue from 'p-queue'
@@ -53,8 +53,14 @@ export const structure = async () => {
 
 	console.log('Database structure setup completed')
 
-	if (process.env.NODE_ENV === 'production')
-		rmdir('docs', { recursive: true }).catch(() => {})
+	if (process.env.NODE_ENV === 'production') {
+		if (
+			await stat('docs')
+				.then((x) => x.isDirectory())
+				.catch(() => false)
+		)
+			await rmdir('docs', { recursive: true }).catch(() => {})
+	}
 
 	await Bun.$`git clone --depth 1 --single-branch --branch main https://github.com/elysiajs/documentation docs`.catch(
 		() => {}
