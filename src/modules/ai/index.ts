@@ -1,4 +1,4 @@
-import { Elysia, NotFoundError, t } from 'elysia'
+import { Elysia, t, NotFoundError } from 'elysia'
 
 import { streamText, stepCountIs } from 'ai'
 

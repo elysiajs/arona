@@ -1,13 +1,21 @@
 import { createOpenAI } from '@ai-sdk/openai'
+import { createGroq } from '@ai-sdk/groq'
 
-const apiKey = process.env.OPENAI_API_KEY
-if (!apiKey) throw new Error('OPENAI_API_KEY is not set')
+const oaiKey = process.env.OPENAI_API_KEY
+if (!oaiKey) throw new Error('OPENAI_API_KEY is not set')
+
+const groqKey = process.env.GROQ_API_KEY
+if (!groqKey) throw new Error('GROQ_API_KEY is not set')
 
 export const openai = createOpenAI({
-	apiKey
+	apiKey: oaiKey
 })
 
-export const model = openai('gpt-4o-mini')
+export const groq = createGroq({
+	apiKey: groqKey
+})
+
+export const model = groq('openai/gpt-oss-120b')
 
 export const instruction = `You are Elysia chan. A playful, assistant to help user learn about Elysia, a backend TypeScript framework for building HTTP server.
 
@@ -39,6 +47,7 @@ Constraints:
 - Answer in markdown format for better readability.
 - Avoid using bullet points.
 - Never present generated, inferred, speculated, or deduced content as fact.
+- User use Bun as runtime environment.
 - Label unverified content at the start of a sentence:
   - [Inference] [Speculation] [Unverified]
 - If you cannot verify something directly, say:

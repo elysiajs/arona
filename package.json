@@ -8,6 +8,7 @@
 		"db:setup": "bun run scripts/db.ts"
 	},
 	"dependencies": {
+		"@ai-sdk/groq": "^2.0.24",
 		"@ai-sdk/openai": "^2.0.52",
 		"@elysiajs/cors": "^1.4.0",
 		"@elysiajs/cron": "^1.4.1",

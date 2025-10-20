@@ -1,6 +1,7 @@
 import { tool } from 'ai'
 import z from 'zod'
 
+import { retry } from '@arona/libs'
 import { search, readPage } from './search'
 
 export const searchTool = tool({
@@ -15,7 +16,7 @@ export const searchTool = tool({
 	execute({ sentence }) {
 		console.log('Searching for:', sentence)
 
-		return search(sentence)
+		return retry(() => search(sentence), 5)
 	}
 })
 
@@ -32,6 +33,6 @@ export const readPageTool = tool({
 	execute({ link }) {
 		console.log('Reading page:', link)
 
-		return readPage(link)
+		return retry(() => readPage(link), 5)
 	}
 })

@@ -10,7 +10,7 @@ import { ai } from './modules'
 import { structure } from './libs/structure'
 
 if (cluster.isPrimary) {
-	const parallel = Math.min(Math.ceil(availableParallelism() / 2), 1)
+	const parallel = Math.min(Math.ceil(availableParallelism() / 2), 2)
 	for (let i = 0; i < parallel; i++) cluster.fork()
 
 	cluster.on('exit', (worker) => {
