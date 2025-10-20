@@ -36,6 +36,8 @@ export const ai = new Elysia()
 			const searchTool = createSearchTool(references)
 			const readPageTool = createPageTool(references)
 
+			references.sort((a, b) => a.score - b.score)
+
 			const response = streamText({
 				model,
 				abortSignal: request.signal,
@@ -61,10 +63,7 @@ export const ai = new Elysia()
 
 			for await (const content of response.textStream) yield content
 
-			const sources = references
-				.filter((x) => x.score >= 0.5)
-				.toSorted((a, b) => a.score - b.score)
-				.slice(0, 5)
+			const sources = references.filter((x) => x.score >= 0.5).slice(0, 5)
 
 			if (sources.length)
 				yield '\n\nSources:\n' +

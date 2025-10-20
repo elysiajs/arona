@@ -41,7 +41,8 @@ export async function instruct(references: Reference[]) {
 	if (Math.abs(references[0]?.score) < 0.5) return content
 
 	const chapters = await retry(
-		() => sql<Pick<Reference, 'content' | 'title'>[]>`SELECT content, title
+		() => sql<Pick<Reference, 'content' | 'title'>[]>`SELECT
+	title, content, file, link
    	FROM doc_chunks
    	WHERE file = ${references[0].file}`
 	)
