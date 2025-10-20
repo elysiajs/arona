@@ -21,7 +21,17 @@ export const ai = new Elysia()
 	.post(
 		'/ask',
 		async function* ({ body: { message, history }, request }) {
-			const references = await search(message, request.signal)
+			const references = await search(
+				message +
+					(history?.length
+						? '\n\n' +
+							history
+								?.filter((x) => x.role === 'user')
+								.map((x) => x.content)
+								.join('\n\n')
+						: ''),
+				request.signal
+			)
 
 			const response = streamText({
 				model,
@@ -43,7 +53,7 @@ export const ai = new Elysia()
 							? message
 							: `Hi Elysia chan! I would to learn about Elysia, would you kindly help me? ${message}`
 					}
-				],
+				]
 				// providerOptions: {
 				// 	openai: {
 				// 		reasoningEffort: 'low'
