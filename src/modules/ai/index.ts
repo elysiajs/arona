@@ -3,7 +3,7 @@ import { Elysia, t, NotFoundError } from 'elysia'
 import { streamText, stepCountIs } from 'ai'
 
 import { model, structure, turnstile } from '@arona/libs'
-import { instruct, readPageTool, search, searchTool } from './libs'
+import { instruct, createPageTool, createSearchTool, search } from './libs'
 
 export const ai = new Elysia()
 	.use(turnstile)
@@ -33,6 +33,9 @@ export const ai = new Elysia()
 				request.signal
 			)
 
+			const searchTool = createSearchTool(references)
+			const readPageTool = createPageTool(references)
+
 			const response = streamText({
 				model,
 				abortSignal: request.signal,
@@ -58,7 +61,10 @@ export const ai = new Elysia()
 
 			for await (const content of response.textStream) yield content
 
-			const sources = references.filter((x) => x.score >= 0.5).slice(0, 5)
+			const sources = references
+				.filter((x) => x.score >= 0.5)
+				.toSorted((a, b) => a.score - b.score)
+				.slice(0, 5)
 
 			if (sources.length)
 				yield '\n\nSources:\n' +

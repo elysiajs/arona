@@ -1,21 +1,23 @@
 import { embed } from 'ai'
 
 import { sql, retry, openai } from '@arona/libs'
-import { findReference, type Reference, type DocFile } from './sql'
+import { findReference, type Reference } from './sql'
 
 export async function readPage(file: string) {
 	if (file.includes('://')) file = file.slice(file.indexOf('/') + 11)
 
 	if (file.includes('#'))
 		return sql<
-			DocFile[]
-		>`SELECT title, content FROM doc_chunks WHERE link = ${file} LIMIT = 1`.then(
-			(x) => x[0]
+			Reference[]
+		>`SELECT title, content, file, link FROM doc_chunks WHERE link = ${file} LIMIT = 1`.then(
+			(x) => Object.assign(x[0], { score: 1 })
 		)
 
 	return sql<
-		DocFile[]
-	>`SELECT title, content FROM doc_chunks WHERE file = ${file}`
+		Reference[]
+	>`SELECT title, content, file, link FROM doc_chunks WHERE file = ${file}`.then(
+		(x) => x.map((r) => Object.assign(r, { score: 1 }))
+	)
 }
 
 export async function search(value: string, abortSignal?: AbortSignal) {
@@ -36,7 +38,7 @@ export async function instruct(references: Reference[]) {
 	let content = `References:\n${references.map((reference) => `## ${reference.title}\n${reference.content}`).join('\n\n')}`
 	if (content.length >= 131072) content = content.slice(0, 131072)
 
-	if (Math.abs(references[0].score) < 0.5) return content
+	if (Math.abs(references[0]?.score) < 0.5) return content
 
 	const chapters = await retry(
 		() => sql<Pick<Reference, 'content' | 'title'>[]>`SELECT content, title
