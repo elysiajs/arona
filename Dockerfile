@@ -6,12 +6,16 @@ WORKDIR /app
 COPY package.json package.json
 COPY bun.lock bun.lock
 
+
 RUN bun install
 
 COPY src src
 COPY tsconfig.json tsconfig.json
 
 ENV NODE_ENV=production
+
+RUN apt update
+RUN apt install -y git
 
 RUN bun build \
 	--compile \
