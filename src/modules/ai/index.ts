@@ -54,11 +54,6 @@ export const ai = new Elysia()
 							: `Hi Elysia chan! I would to learn about Elysia, would you kindly help me? ${message}`
 					}
 				]
-				// providerOptions: {
-				// 	openai: {
-				// 		reasoningEffort: 'low'
-				// 	}
-				// }
 			})
 
 			for await (const content of response.textStream) yield content
