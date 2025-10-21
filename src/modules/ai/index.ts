@@ -31,20 +31,7 @@ export const ai = new Elysia()
 			request,
 			body: { message, history, reference: requestedReference }
 		}) {
-			const references = await search(
-				message +
-					(history?.length
-						? '\n\n' +
-							history
-								?.filter((x) => x.role === 'user')
-								.map((x) => x.content)
-								.join('\n\n')
-						: ''),
-				request.signal
-			)
-
 			let requested: Reference[] | undefined
-
 			if (requestedReference) {
 				const pages = (await readPage(
 					requestedReference
@@ -56,6 +43,20 @@ export const ai = new Elysia()
 						score: 1 // Highest priority
 					}))
 			}
+
+			const references = requested?.length
+				? []
+				: await search(
+						message +
+							(history?.length
+								? '\n\n' +
+									history
+										?.filter((x) => x.role === 'user')
+										.map((x) => x.content)
+										.join('\n\n')
+								: ''),
+						request.signal
+					)
 
 			const searchTool = createSearchTool(references)
 			const readPageTool = createPageTool(references)
