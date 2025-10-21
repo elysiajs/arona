@@ -16,9 +16,10 @@ const titleWeight = {
 	essential: 1,
 	blog: 0.8,
 	eden: 0.7,
-	unknown: 0.5,
-	migrate: 0.4,
-	integration: 0.35,
+	patterns: 0.5,
+	unknown: 0.4,
+	migrate: 0.3,
+	integration: 0.3,
 	tutorial: 0.3
 } as const
 
@@ -103,6 +104,7 @@ export const structure = async () => {
 						.slice(content.indexOf('---', 3) + 3)
 						.replace(/<script setup(.*)<\/script>/gs, '')
 						.replace(/<Playground[^>]*?\/>/gs, '')
+						.replace(/<Deck>.*?<\/Deck>/gs, '')
 						.trim()
 				})
 			})
@@ -167,6 +169,11 @@ export const structure = async () => {
 						.map((c) => ({
 							...x,
 							...c,
+							content: c.content.trimStart().startsWith('#')
+								? c.content
+										.slice(c.content.indexOf('\n'))
+										.trim()
+								: c.content.trim(),
 							link: headerToLink(x.file, c.title)
 						}))
 				)
@@ -193,7 +200,11 @@ export const structure = async () => {
 			)
 
 			if (existIndex === -1) chapters.push(newChapter)
-			else if (currentChapters[existIndex].content !== newChapter.content)
+			else if (
+				// set to true to reindex all
+				// true
+				currentChapters[existIndex].content !== newChapter.content
+			)
 				chapters.push(newChapter)
 		}
 
@@ -252,14 +263,21 @@ export const structure = async () => {
 					const { title, link, content, file } = chapters[i]
 					const subTitle = file.split('/')[1] || 'unknown'
 
+					let weight: number =
+						titleWeight[subTitle as keyof typeof titleWeight] ||
+						titleWeight.unknown
+
+					if (subTitle === 'patterns' && file.includes('websocket'))
+						weight = 0.1
+
 					sqlValues += makeSqlValues(i, 8)
+
 					values.push(
 						link,
 						file,
 						title,
 						content,
-						titleWeight[subTitle as keyof typeof titleWeight] ||
-							titleWeight.unknown,
+						weight,
 						`[${embed.join(',')}]`,
 						`[${titleEmbed.join(',')}]`,
 						`[${fileEmbed.join(',')}]`

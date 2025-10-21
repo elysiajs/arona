@@ -21,7 +21,7 @@ if (cluster.isPrimary) {
 	new Elysia().use(
 		cron({
 			name: 'Reindex Database',
-			pattern: '0 */6 * * *',
+			pattern: '0 */12 * * *',
 			run: structure
 		})
 	)
