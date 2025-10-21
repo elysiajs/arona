@@ -9,8 +9,8 @@ ABS(
  (
    (
      0.125 * (d.title_embedding <#> q.embedding) +
-     0.6 * (d.embedding       <#> q.embedding) +
-     0.1 * (d.file_name_embedding  <#> q.embedding) +
+     0.6 * (d.embedding <#> q.embedding) +
+     0.1 * (d.file_name_embedding <#> q.embedding) +
      0.175 * d.weight * - 1
    )
  )
@@ -18,7 +18,7 @@ ABS(
 ) AS score
 FROM doc_chunks as d, q
 ORDER BY score DESC
-LIMIT 15;`
+LIMIT 10;`
 
 export interface DocFile {
 	title: string

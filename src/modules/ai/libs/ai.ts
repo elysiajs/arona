@@ -19,9 +19,12 @@ export const createSearchTool = (references: Reference[]) =>
 		execute({ sentence }) {
 			console.log('Searching for:', sentence)
 
+			const links = new Set(references.map((r) => r.link))
+
 			return retry(() => search(sentence), 5).then((x) => {
 				if (!x) return null
 
+				x = x.filter((r) => !links.has(r.link))
 				references.push(...x)
 
 				return x
@@ -46,11 +49,19 @@ export const createPageTool = (references: Reference[]) =>
 		execute({ link }) {
 			console.log('Reading page:', link)
 
+			const links = new Set(references.map((r) => r.link))
+
 			return retry(() => readPage(link), 5).then((x) => {
 				if (!x) return null
 
-				if (Array.isArray(x)) references.push(...x)
-				else references.push(x)
+				if (Array.isArray(x)) {
+					x = x.filter((r) => !links.has(r.link))
+					references.push(...x)
+				} else {
+					if (links.has(x.link)) return null
+
+					references.push(x)
+				}
 
 				return x
 			})

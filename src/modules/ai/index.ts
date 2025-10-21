@@ -60,7 +60,7 @@ export const ai = new Elysia()
 			const searchTool = createSearchTool(references)
 			const readPageTool = createPageTool(references)
 
-			references.sort((a, b) => a.score - b.score)
+			references.sort((a, b) => b.score - a.score)
 
 			const response = streamText({
 				model,
@@ -79,7 +79,24 @@ export const ai = new Elysia()
 								: references
 						)
 					},
-					...(history ?? []),
+					...(history
+						?.map((x) => {
+							if (x.content.length < 2048) return x
+
+							const sourceIndex =
+								x.content.lastIndexOf('Sources:\n')
+							const source =
+								sourceIndex !== -1
+									? '\n\n' + x.content.slice(sourceIndex)
+									: ''
+
+							return {
+								...x,
+								content:
+									x.content.slice(0, 2048) + '...' + source
+							}
+						})
+						.slice(-8) ?? []),
 					{
 						role: 'user',
 						content: history?.length
