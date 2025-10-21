@@ -62,16 +62,6 @@ export const ai = new Elysia()
 
 			references.sort((a, b) => b.score - a.score)
 
-			const ins = await instruct(
-				requested ? [...references, ...requested] : references
-			)
-
-			console.log(
-				ins,
-				references.map((x) => x.link),
-				ins.length
-			)
-
 			const response = streamText({
 				model,
 				abortSignal: request.signal,
