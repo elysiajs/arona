@@ -43,14 +43,18 @@ export const ai = new Elysia()
 				request.signal
 			)
 
-			if (requestedReference) {
-				const page = (await readPage(requestedReference)) as Reference
+			let requested: Reference[] | undefined
 
-				if (page)
-					references.unshift({
+			if (requestedReference) {
+				const pages = (await readPage(
+					requestedReference
+				)) as Reference[]
+
+				if (pages)
+					requested = pages.map((page) => ({
 						...page,
-						score: 1
-					})
+						score: 1 // Highest priority
+					}))
 			}
 
 			const searchTool = createSearchTool(references)
@@ -69,7 +73,11 @@ export const ai = new Elysia()
 				messages: [
 					{
 						role: 'system',
-						content: await instruct(references)
+						content: await instruct(
+							requested
+								? [...references, ...requested]
+								: references
+						)
 					},
 					...(history ?? []),
 					{
