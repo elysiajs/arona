@@ -3,7 +3,14 @@ import { Elysia, t, NotFoundError } from 'elysia'
 import { streamText, stepCountIs } from 'ai'
 
 import { model, structure, turnstile } from '@arona/libs'
-import { instruct, createPageTool, createSearchTool, search } from './libs'
+import {
+	createPageTool,
+	createSearchTool,
+	instruct,
+	readPage,
+	type Reference,
+	search
+} from './libs'
 
 export const ai = new Elysia()
 	.use(turnstile)
@@ -20,7 +27,10 @@ export const ai = new Elysia()
 	})
 	.post(
 		'/ask',
-		async function* ({ body: { message, history }, request }) {
+		async function* ({
+			request,
+			body: { message, history, reference: requestedReference }
+		}) {
 			const references = await search(
 				message +
 					(history?.length
@@ -32,6 +42,16 @@ export const ai = new Elysia()
 						: ''),
 				request.signal
 			)
+
+			if (requestedReference) {
+				const page = (await readPage(requestedReference)) as Reference
+
+				if (page)
+					references.unshift({
+						...page,
+						score: 1
+					})
+			}
 
 			const searchTool = createSearchTool(references)
 			const readPageTool = createPageTool(references)
@@ -56,14 +76,14 @@ export const ai = new Elysia()
 						role: 'user',
 						content: history?.length
 							? message
-							: `Hi Elysia chan! I would to learn about Elysia, would you kindly help me? ${message}`
+							: `Hi Elysia chan! ${message}. Would you kindly help me?`
 					}
 				]
 			})
 
 			for await (const content of response.textStream) yield content
 
-			const sources = references.filter((x) => x.score >= 0.5).slice(0, 5)
+			const sources = references.filter((x) => x.score >= 0.5).slice(0, 8)
 
 			if (sources.length)
 				yield '\n\nSources:\n' +
@@ -79,6 +99,7 @@ export const ai = new Elysia()
 			AIRateLimit: true,
 			headers: 'turnstile',
 			body: t.Object({
+				reference: t.Optional(t.String()),
 				message: t.String({
 					maxLength: 4096
 				}),

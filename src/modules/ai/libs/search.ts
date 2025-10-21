@@ -3,7 +3,7 @@ import { embed } from 'ai'
 import { sql, retry, openai } from '@arona/libs'
 import { findReference, type Reference } from './sql'
 
-export async function readPage(file: string) {
+export async function readPage(file: string): Promise<Reference | Reference[]> {
 	if (file.includes('://')) file = file.slice(file.indexOf('/') + 11)
 
 	if (file.includes('#'))
@@ -35,6 +35,8 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 }
 
 export async function instruct(references: Reference[]) {
+	if (!references.length) return 'References: There is no references available. Might say you are not able to find any information regarding this topic.'
+
 	let content = `References:\n${references.map((reference) => `## ${reference.title}\n${reference.content}`).join('\n\n')}`
 	if (content.length >= 131072) content = content.slice(0, 131072)
 
