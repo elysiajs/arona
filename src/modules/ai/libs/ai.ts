@@ -55,10 +55,12 @@ export const createPageTool = (references: Reference[]) =>
 				if (!x) return null
 
 				if (Array.isArray(x)) {
-					x = x.filter((r) => !links.has(r.link))
-					references.push(...x)
+					references.push(...x.filter((r) => !links.has(r.link)))
 				} else {
-					if (links.has(x.link)) return null
+					if (links.has(x.link))
+						return references.find(
+							(r) => r.link === (x as Reference).link
+						)
 
 					references.push(x)
 				}
