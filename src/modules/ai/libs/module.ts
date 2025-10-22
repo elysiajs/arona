@@ -7,7 +7,7 @@ export const rateLimit = new Elysia().use(ip).macro('AIRateLimit', {
 	async beforeHandle({ ip, status, set }) {
 		if (isDev) return
 
-		const limit = await rateLimitFn('ai', 6, 30)
+		const limit = await rateLimitFn('ai', 6, 42)
 		if (limit.allowed) return
 
 		set.headers['Retry-After'] = limit.retryAfter / 1000

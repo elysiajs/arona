@@ -1,7 +1,6 @@
 import { Elysia, t } from 'elysia'
 
 import { API_KEY, isDev } from './flags'
-import { redis } from './redis'
 import { ip } from './ip'
 import { rateLimit } from './rate-limit'
 import { retry } from './retry'
