@@ -2,7 +2,7 @@ import { Elysia, t, NotFoundError } from 'elysia'
 
 import { streamText, stepCountIs } from 'ai'
 
-import { model, structure, turnstile } from '@arona/libs'
+import { model, pow, structure, turnstile } from '@arona/libs'
 import {
 	createPageTool,
 	createSearchTool,
@@ -14,6 +14,7 @@ import {
 
 export const ai = new Elysia()
 	.use(turnstile)
+	.use(pow)
 	.patch('/database/index', async ({ headers }) => {
 		if (
 			process.env.NODE_ENV === 'development' ||
@@ -123,6 +124,7 @@ export const ai = new Elysia()
 		{
 			turnstile: true,
 			AIRateLimit: true,
+			pow: true,
 			headers: 'turnstile',
 			body: t.Object({
 				reference: t.Optional(t.String()),

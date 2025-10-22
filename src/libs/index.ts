@@ -1,5 +1,7 @@
 export { sql } from './database'
 export * from './ai'
+export { ip } from './ip'
+export { pow } from './pow'
 export { retry } from './retry'
 export { structure } from './structure'
 export { turnstile } from './turnstile'

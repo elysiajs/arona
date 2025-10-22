@@ -8,6 +8,31 @@ import { cron } from '@elysiajs/cron'
 
 import { ai } from './modules'
 import { structure } from './libs/structure'
+import { pow } from './libs'
+
+export const app = new Elysia({
+	cookie: {
+		httpOnly: true,
+		sameSite: 'strict',
+		secure: process.env.NODE_ENV === 'production',
+		secrets: process.env.CHALLENGE_SECRET
+	}
+})
+	.use(
+		openapi({
+			enabled: process.env.NODE_ENV !== 'production',
+			references: fromTypes()
+		})
+	)
+	.use(
+		cors({
+			origin: ['http://localhost:5173', 'https://elysiajs.com']
+		})
+	)
+	.use(pow)
+	.get('/', 'arona')
+	.get('/heath', 'ok')
+	.use(ai)
 
 if (cluster.isPrimary) {
 	const parallel = availableParallelism() / 2
@@ -26,25 +51,10 @@ if (cluster.isPrimary) {
 		})
 	)
 } else {
-	const app = new Elysia()
-		.use(
-			openapi({
-				enabled: process.env.NODE_ENV !== 'production',
-				references: fromTypes()
-			})
-		)
-		.use(
-			cors({
-				origin: ['http://localhost:5173', 'https://elysiajs.com']
-			})
-		)
-		.get('/', 'arona')
-		.get('/heath', 'ok')
-		.use(ai)
-		.listen({
-			port: process.env.PORT ?? 3000,
-			host: '0.0.0.0'
-		})
+	app.listen({
+		port: process.env.PORT ?? 3000,
+		host: '0.0.0.0'
+	})
 
 	console.log(
 		`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`

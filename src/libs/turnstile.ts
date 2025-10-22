@@ -1,6 +1,8 @@
 import { Elysia, t } from 'elysia'
 import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible'
 
+import { ip } from './ip'
+
 if (!process.env.TURNSTILE_SECRET)
 	throw new Error('TURNSTILE_SECRET is not set')
 
@@ -15,6 +17,7 @@ const aiLimiter = new RateLimiterMemory({
 })
 
 export const turnstile = new Elysia()
+	.use(ip)
 	.model({
 		turnstile: t.Object(
 			{
@@ -25,13 +28,6 @@ export const turnstile = new Elysia()
 				additionalProperties: true
 			}
 		)
-	})
-	.macro('ip', {
-		resolve: async ({ headers, server, request }) => ({
-			ip:
-				headers['cf-connecting-ip'] ||
-				(await server?.requestIP(request)?.address)
-		})
 	})
 	.macro('AIRateLimit', {
 		ip: true,
