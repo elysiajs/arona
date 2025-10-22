@@ -7,8 +7,7 @@ import { cors } from '@elysiajs/cors'
 import { cron } from '@elysiajs/cron'
 
 import { ai } from './modules'
-import { structure } from './libs/structure'
-import { pow } from './libs'
+import { isDev, pow, structure } from './libs'
 
 export const app = new Elysia({
 	cookie: {
@@ -34,7 +33,7 @@ export const app = new Elysia({
 	.get('/heath', 'ok')
 	.use(ai)
 
-if (cluster.isPrimary) {
+if (!isDev && cluster.isPrimary) {
 	const parallel = availableParallelism() / 2
 	for (let i = 0; i < parallel; i++) cluster.fork()
 

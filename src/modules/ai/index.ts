@@ -2,25 +2,23 @@ import { Elysia, t, NotFoundError } from 'elysia'
 
 import { streamText, stepCountIs } from 'ai'
 
-import { model, pow, structure, turnstile } from '@arona/libs'
+import { API_KEY, isDev, model, pow, structure, turnstile } from '@arona/libs'
 import {
 	createPageTool,
 	createSearchTool,
 	instruct,
+	rateLimit,
 	readPage,
-	type Reference,
-	search
+	search,
+	type Reference
 } from './libs'
 
 export const ai = new Elysia()
 	.use(turnstile)
 	.use(pow)
+	.use(rateLimit)
 	.patch('/database/index', async ({ headers }) => {
-		if (
-			process.env.NODE_ENV === 'development' ||
-			headers['x-api-key'] !== (process.env['api_key'] ?? 'Blue Archive')
-		)
-			throw new NotFoundError()
+		if (headers['x-api-key'] !== API_KEY) throw new NotFoundError()
 
 		await structure()
 
@@ -122,9 +120,9 @@ export const ai = new Elysia()
 						.join('\n')
 		},
 		{
-			turnstile: true,
 			AIRateLimit: true,
-			pow: true,
+			turnstile: true,
+			// pow: true,
 			headers: 'turnstile',
 			body: t.Object({
 				reference: t.Optional(t.String()),

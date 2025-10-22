@@ -2,6 +2,7 @@ import { Elysia, t } from 'elysia'
 
 import crypto from 'crypto'
 
+import { API_KEY } from './flags'
 import { ip } from './ip'
 
 const CONFIG = {
@@ -48,7 +49,9 @@ export const pow = new Elysia({
 	.prefix('model', 'pow.')
 	.get(
 		'/request',
-		({ ip, cookie: { challenge } }) => {
+		({ ip, headers, cookie: { challenge } }) => {
+			if (headers['x-api-key'] === API_KEY) return
+
 			const nonce = crypto.randomBytes(32).toString('hex')
 			const issued = Date.now()
 
