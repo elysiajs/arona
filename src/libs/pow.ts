@@ -1,5 +1,4 @@
 import { Elysia, t } from 'elysia'
-import cors from '@elysiajs/cors'
 
 import crypto from 'crypto'
 
@@ -43,11 +42,6 @@ export const pow = new Elysia({
 	name: 'libs/pow'
 })
 	.use(ip)
-	.use(
-		cors({
-			origin: ['http://localhost:5173', 'https://elysiajs.com']
-		})
-	)
 	.model({
 		...models,
 		challengeRecordCookie: t.Object({
