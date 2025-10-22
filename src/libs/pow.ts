@@ -5,12 +5,9 @@ import crypto from 'crypto'
 import { ip } from './ip'
 
 const CONFIG = {
-	POW_DIFFICULTY: 19,
+	POW_DIFFICULTY: 20,
 	CHALLENGE_EXPIRY_MS: 1.5 * 60_000,
-	TOKEN_EXPIRY_MS: 5 * 60_000,
-	RP_ID: process.env.RP_ID || 'localhost',
-	RP_NAME: 'Elysia Arona Proof of Work',
-	ORIGIN: process.env.ORIGIN || 'http://localhost:5173'
+	TOKEN_EXPIRY_MS: 5 * 60_000
 } as const
 
 const secret = process.env.CHALLENGE_SECRET
