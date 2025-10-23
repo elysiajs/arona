@@ -91,7 +91,7 @@ export const ai = new Elysia()
 								messages: [
 									{
 										role: 'system',
-										content: !requestedReference
+										content: references.length
 											? `${instruction}\nReferences:\n${references
 													.map(
 														(x) =>
