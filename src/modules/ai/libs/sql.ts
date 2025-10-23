@@ -18,7 +18,7 @@ ABS(
 ) AS score
 FROM doc_chunks as d, q
 ORDER BY score DESC
-LIMIT 10;`
+LIMIT 8;`
 
 export interface DocFile {
 	title: string
