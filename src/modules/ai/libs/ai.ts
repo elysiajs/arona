@@ -1,14 +1,55 @@
 import { tool } from 'ai'
 import * as z from 'zod'
 
-import { retry } from '@arona/libs'
-import { search, readPage } from './search'
+import { retry, redis, log } from '@arona/libs'
+import { search, readPage, normalizePage } from './search'
 import type { Reference } from './sql'
+
+const referenceModel = z.object({
+	link: z.string().meta({
+		description: 'The link of the page to read from Elysia documentation',
+		examples: ['/essential/life-cycle', '/essential/life-cycle#transform']
+	}),
+	title: z.string().meta({
+		description: 'The title of the page'
+	}),
+	content: z.string().meta({
+		description: 'The content excerpt of the page'
+	}),
+	score: z.number().meta({
+		description: 'Tthe relevance score of the page'
+	})
+})
+
+const referencesModel = referenceModel
+	.or(z.array(referenceModel))
+	.nullable()
+	.meta({
+		description: 'The reference(s) retrieved from the page.'
+	})
+
+async function cache<T extends (...args: any) => any>(
+	name: string,
+	fn: T
+): Promise<Awaited<ReturnType<T>>> {
+	const cache = await redis.get(name)
+	if (cache) {
+		log(`Cache hit for '${name}'`)
+
+		return JSON.parse(cache)
+	}
+
+	const result = await fn()
+	redis.set(name, JSON.stringify(result), 'EX', 3600)
+
+	return result
+}
 
 export const createSearchTool = (references: Reference[]) =>
 	tool({
 		name: 'search',
-		description: 'Find relevant information from Elysia documentation.',
+		description:
+			'Find relevant information from Elysia documentation. Read only, no side effects.',
 		inputSchema: z.object({
 			sentence: z.string().meta({
 				description:
@@ -16,56 +57,60 @@ export const createSearchTool = (references: Reference[]) =>
 				examples: ['handler', 'OpenAPI type gen', 'Eden Treaty']
 			})
 		}),
-		execute({ sentence }) {
-			console.log('Searching for:', sentence)
+		outputSchema: referencesModel,
+		async execute({ sentence }) {
+			log('Search:', sentence)
 
-			const links = new Set(references.map((r) => r.link))
+			let documents = await retry(
+				() => cache(`search:${sentence}`, () => search(sentence)),
+				5
+			)
+			if (!documents) return null
 
-			return retry(() => search(sentence), 5).then((x) => {
-				if (!x) return null
+			// Intentionally no await
+			redis.set(
+				`search:${sentence}`,
+				JSON.stringify(documents),
+				'EX',
+				3600
+			)
 
-				x = x.filter((r) => !links.has(r.link))
-				references.push(...x)
+			references.push(...documents)
 
-				return x
-			})
+			return documents
 		}
 	})
 
 export const createPageTool = (references: Reference[]) =>
 	tool({
 		name: 'read_page',
-		description: 'Read a specific page from Elysia documentation.',
+		description:
+			'Read a specific page with in-depth detail. Read only, no side effects.',
 		inputSchema: z.object({
 			link: z.string().meta({
 				description:
-					'The link of the page to read from Elysia documentation',
+					'The link of the page to read from Elysia documentation. Must not end with ".md"',
 				examples: [
-					'/essential/handler',
-					'/essential/life-cycle#transform'
+					'essential/handler',
+					'essential/life-cycle#transform'
 				]
 			})
 		}),
-		execute({ link }) {
-			console.log('Reading page:', link)
+		outputSchema: referencesModel,
+		async execute({ link }) {
+			link = normalizePage(link)
 
-			const links = new Set(references.map((r) => r.link))
+			log('Read:', link)
 
-			return retry(() => readPage(link), 5).then((x) => {
-				if (!x) return null
+			const documents = await retry(
+				() => cache(`page:${link}`, () => readPage(link)),
+				5
+			)
+			if (!documents) return null
 
-				if (Array.isArray(x)) {
-					references.push(...x.filter((r) => !links.has(r.link)))
-				} else {
-					if (links.has(x.link))
-						return references.find(
-							(r) => r.link === (x as Reference).link
-						)
+			if (Array.isArray(documents)) references.push(...documents)
+			else references.push(documents)
 
-					references.push(x)
-				}
-
-				return x
-			})
+			return documents
 		}
 	})

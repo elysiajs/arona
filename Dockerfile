@@ -11,6 +11,7 @@ RUN bun install
 
 COPY src src
 COPY tsconfig.json tsconfig.json
+COPY public public
 
 ENV NODE_ENV=production
 

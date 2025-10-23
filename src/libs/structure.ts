@@ -4,7 +4,7 @@ import { rmdir, stat } from 'fs/promises'
 import { embedMany } from 'ai'
 import Queue from 'p-queue'
 
-import { openai, sql } from '@arona/libs'
+import { openai, sql, log } from '@arona/libs'
 
 const url = process.env.DATABASE_URL
 if (!url) throw new Error('DATABASE_URL is not set')
@@ -26,7 +26,7 @@ const titleWeight = {
 export const structure = async () => {
 	const rootSQL = new SQL(dbRoot)
 	await sql`CREATE DATABASE ${sql(dbName)};`.catch(() => {})
-	console.log(`Created Database "${dbName}"`)
+	log(`Created Database "${dbName}"`)
 	await rootSQL.close()
 
 	await sql`CREATE EXTENSION IF NOT EXISTS vector;`
@@ -52,7 +52,7 @@ export const structure = async () => {
 	// )
 	// await sql`SET ivfflat.probes = 10`.catch(() => {})
 
-	console.log('Database structure setup completed')
+	log('Database structure setup completed')
 
 	if (process.env.NODE_ENV === 'production') {
 		if (
@@ -219,7 +219,7 @@ export const structure = async () => {
 		if (!chapters.length && !toRemove.length) return
 
 		if (chapters.length) {
-			console.log(
+			log(
 				'update',
 				chapters.map((a) => a.link)
 			)
@@ -307,7 +307,7 @@ export const structure = async () => {
 		}
 
 		if (toRemove.length) {
-			console.log(
+			log(
 				'remove',
 				toRemove.map((a) => a.link)
 			)
@@ -317,7 +317,7 @@ export const structure = async () => {
 				.join(', ')});`
 
 			await sql.unsafe(query).catch(() => {
-				console.log('Failed to remove', query)
+				log('Failed to remove', query)
 			})
 		}
 	}
@@ -343,11 +343,11 @@ export const structure = async () => {
 	_chunk.length = 0
 	size = 0
 
-	console.log('Total', queue.size, 'batches to process')
+	log('Total', queue.size, 'batches to process')
 
 	await queue.onEmpty()
 
-	console.log('Data insertion completed')
+	log('Data insertion completed')
 
 	if (process.env.NODE_ENV === 'production')
 		rmdir('docs', { recursive: true })

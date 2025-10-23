@@ -1,7 +1,7 @@
 import cluster from 'cluster'
 import { availableParallelism } from 'os'
 
-import { Elysia, NotFoundError, t } from 'elysia'
+import { Elysia, t, file } from 'elysia'
 import { openapi, fromTypes } from '@elysiajs/openapi'
 import { cors } from '@elysiajs/cors'
 import { cron } from '@elysiajs/cron'
@@ -29,7 +29,7 @@ export const app = new Elysia({
 		})
 	)
 	.use(pow)
-	.get('/', 'arona')
+	.get('/', file('public/arona.webp'))
 	.get('/heath', 'ok')
 	.use(ai)
 
