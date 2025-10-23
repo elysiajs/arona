@@ -92,7 +92,7 @@ export const ai = new Elysia()
 									{
 										role: 'system',
 										content: !requestedReference
-											? `${instruction}\n${references
+											? `${instruction}\nReferences:\n${references
 													.map(
 														(x) =>
 															`# ${x.title}\n${x.content}`
