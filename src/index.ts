@@ -29,7 +29,7 @@ export const app = new Elysia({
 		})
 	)
 	.use(pow)
-	.get('/', file('public/arona.webp'))
+	.get('/', () => file('public/arona.webp'))
 	.get('/heath', 'ok')
 	.use(ai)
 
