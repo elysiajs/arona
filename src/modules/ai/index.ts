@@ -42,9 +42,9 @@ export const ai = new Elysia()
 		}) {
 			const references: Reference[] = []
 			if (requestedReference) {
-				const pages = (await readPage(
-					requestedReference
-				)) as Reference[]
+				const pages = retry(() =>
+					readPage(requestedReference)
+				) as unknown as Reference[]
 
 				if (pages)
 					references.push(
@@ -91,7 +91,14 @@ export const ai = new Elysia()
 								messages: [
 									{
 										role: 'system',
-										content: instruction
+										content: !requestedReference
+											? `${instruction}\n${references
+													.map(
+														(x) =>
+															`# ${x.title}\n${x.content}`
+													)
+													.join('\n')}`
+											: instruction
 									},
 									...compactHistory,
 									{
