@@ -8,19 +8,18 @@ import { search, readPage, normalizePage } from './search'
 import type { Reference } from './sql'
 
 const referenceModel = z.object({
-	link: z.string().meta({
-		description: 'The link of the page to read from Elysia documentation',
-		examples: ['/essential/life-cycle', '/essential/life-cycle#transform']
-	}),
-	title: z.string().meta({
-		description: 'The title of the page'
-	}),
-	content: z.string().meta({
-		description: 'The content excerpt of the page'
-	}),
-	score: z.number().meta({
-		description: 'Tthe relevance score of the page'
-	})
+	link: z
+		.string()
+		.describe('The link of the page to read from Elysia documentation')
+		.meta({
+			examples: [
+				'/essential/life-cycle',
+				'/essential/life-cycle#transform'
+			]
+		}),
+	title: z.string().describe('The title of the page'),
+	content: z.string().describe('The content excerpt of the page'),
+	score: z.number().describe('The relevance score of the page')
 })
 
 const referencesModel = referenceModel
@@ -54,13 +53,14 @@ export const createSearchTool = (references: Reference[]) =>
 	tool({
 		name: 'search',
 		description:
-			'Find relevant information from Elysia documentation. Read only, no side effects.',
+			'Find relevant information from Elysia documentation. This tool is pure (deterministic), do not call them twice with the same parameters.',
 		inputSchema: z.object({
-			sentence: z.string().meta({
-				description:
-					'The keyword/sentence to search in the documentation',
-				examples: ['handler', 'OpenAPI type gen', 'Eden Treaty']
-			})
+			sentence: z
+				.string()
+				.describe('The keyword/sentence to search in the documentation')
+				.meta({
+					examples: ['handler', 'OpenAPI type gen', 'Eden Treaty']
+				})
 		}),
 		outputSchema: referencesModel,
 		async execute({ sentence }) {
@@ -90,7 +90,7 @@ export const createPageTool = (references: Reference[]) =>
 	tool({
 		name: 'read_page',
 		description:
-			'Read a specific page with in-depth detail. Read only, no side effects.',
+			'Read a specific page with in-depth detail. This tool is pure (deterministic), do not call them twice with the same parameters.',
 		inputSchema: z.object({
 			link: z.string().meta({
 				description:

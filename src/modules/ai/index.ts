@@ -41,7 +41,8 @@ export const ai = new Elysia()
 		async function* ({
 			request,
 			log,
-			body: { message, history, reference: requestedPage }
+			body: { message, history, reference: requestedPage },
+			ip
 		}) {
 			const references: Reference[] = []
 			if (requestedPage) {
@@ -114,13 +115,42 @@ export const ai = new Elysia()
 													? message
 													: `Hi Elysia chan! ${message}. Would you kindly help me?`
 											}
-										]
+										],
+										providerOptions: {
+											groq: {
+												reasoningFormat: 'hidden',
+												reasoningEffort: 'medium',
+												user: ip
+											}
+										},
+										onFinish({ usage }) {
+											log.info({
+												question: message,
+												sources: references.length
+											})
+											log.info(usage)
+
+											setAttributes({
+												'custom.question': message,
+												'custom.references':
+													references.length,
+												'custom.input_tokens':
+													usage.inputTokens,
+												'custom.cached_input_tokens':
+													usage.cachedInputTokens,
+												'custom.output_tokens':
+													usage.outputTokens,
+												'custom.reasoning_tokens':
+													usage.reasoningTokens,
+												'custom.total_tokens':
+													usage.totalTokens
+											})
+										}
 									})
 
-									for await (const content of response.textStream) {
+									for await (const content of response.textStream)
 										if (content.trim())
 											resolve(response.textStream as any)
-									}
 
 									reject('Retry')
 								}
@@ -137,27 +167,6 @@ export const ai = new Elysia()
 				yield chunk
 			}
 			streamSpan.end()
-
-			const totalCharacter =
-				instruct.length +
-				compactHistory.length +
-				references.map((x) => x.content).join(' ').length
-
-			log.info(`Question: '${message}'`)
-			log.info(`Sources: ${references.length}`)
-			log.info(`Input Length: ${totalCharacter}`)
-			log.info(`Output length: ${i} characters`)
-			log.info(`Estimate Input Token: ${~~(totalCharacter / 3)}`)
-			log.info(`Estimate Output Token: ${~~(i / 3)}`)
-
-			setAttributes({
-				'custom.question': message,
-				'custom.source_count': references.length,
-				'custom.input_length': totalCharacter,
-				'custom.output_length': i,
-				'custom.estimate_input_token': ~~(totalCharacter / 3),
-				'custom.estimate_output_token': ~~(i / 3)
-			})
 
 			const sources = deduplicateReferences(references).toSorted(
 				(a, b) => b.score - a.score
