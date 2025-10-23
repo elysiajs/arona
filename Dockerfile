@@ -11,7 +11,6 @@ RUN bun install
 
 COPY src src
 COPY tsconfig.json tsconfig.json
-COPY public public
 
 ENV NODE_ENV=production
 
@@ -31,6 +30,7 @@ FROM gcr.io/distroless/base
 WORKDIR /app
 
 COPY --from=build /app/server server
+COPY public public
 
 ENV NODE_ENV=production
 
