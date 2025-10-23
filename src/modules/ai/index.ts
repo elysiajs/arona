@@ -104,7 +104,8 @@ export const ai = new Elysia()
 							})
 
 							for await (const content of response.textStream) {
-								if (content.trim()) resolve(response.textStream as any)
+								if (content.trim())
+									resolve(response.textStream as any)
 							}
 
 							reject('Retry')
@@ -125,14 +126,22 @@ export const ai = new Elysia()
 				(a, b) => b.score - a.score
 			)
 
-			if (sources.length)
+			if (sources.length) {
+				const referencedFiles = new Set<string>()
+
 				yield '\n\nSources:\n' +
 					sources
+						.filter((source) =>
+							referencedFiles.has(source.file)
+								? false
+								: referencedFiles.add(source.file)
+						)
 						.map(
 							(source) =>
 								`- [${source.file.slice(5, -3)} - ${source.title}](https://elysiajs.com/${source.link})`
 						)
 						.join('\n')
+			}
 		},
 		{
 			AIRateLimit: true,
