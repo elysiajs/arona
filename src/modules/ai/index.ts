@@ -104,10 +104,10 @@ export const ai = new Elysia()
 							})
 
 							for await (const content of response.textStream) {
-								if (content) resolve(response.textStream as any)
-
-								reject('Retry')
+								if (content.trim()) resolve(response.textStream as any)
 							}
+
+							reject('Retry')
 						}
 					),
 				3,
