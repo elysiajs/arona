@@ -43,9 +43,9 @@ export const ai = new Elysia()
 		}) {
 			const references: Reference[] = []
 			if (requestedReference) {
-				const pages = await retry(() =>
+				const pages = (await retry(() =>
 					readPage(requestedReference)
-				) as unknown as Reference[]
+				)) as unknown as Reference[]
 
 				if (pages)
 					references.push(
@@ -77,6 +77,12 @@ export const ai = new Elysia()
 					})
 					.slice(-8) ?? []
 
+			const instruct = references.length
+				? `${instruction}\nPage Data:\n${references
+						.map((x) => `# ${x.title}\n${x.content}`)
+						.join('\n')}`
+				: instruction
+
 			const response = await retry(
 				() =>
 					new Promise<AsyncGenerator<string, any, any>>(
@@ -92,14 +98,7 @@ export const ai = new Elysia()
 								messages: [
 									{
 										role: 'system',
-										content: references.length
-											? `${instruction}\nPage Data:\n${references
-													.map(
-														(x) =>
-															`# ${x.title}\n${x.content}`
-													)
-													.join('\n')}`
-											: instruction
+										content: instruct
 									},
 									...compactHistory,
 									{
@@ -125,10 +124,14 @@ export const ai = new Elysia()
 
 			for await (const chunk of response) yield chunk
 
+			const totalCharacter =
+				instruct.length +
+				compactHistory.length +
+				references.map((x) => x.content).join(' ').length
+
 			log.info(`Sources: ${references.length}`)
-			log.info(
-				`Token: ${references.map((x) => x.content).join(' ').length}`
-			)
+			log.info(`Total Characters: ${totalCharacter}`)
+			log.info(`Estimate token: ${totalCharacter / 3}`)
 
 			const sources = deduplicateReferences(references).toSorted(
 				(a, b) => b.score - a.score
