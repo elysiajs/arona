@@ -1,4 +1,5 @@
 import { Elysia, t, NotFoundError } from 'elysia'
+import { record, setAttributes, startSpan } from '@elysiajs/opentelemetry'
 
 import { streamText, stepCountIs } from 'ai'
 
@@ -14,6 +15,7 @@ import {
 	turnstile
 } from '@arona/libs'
 import {
+	cache,
 	createPageTool,
 	createSearchTool,
 	deduplicateReferences,
@@ -39,12 +41,14 @@ export const ai = new Elysia()
 		async function* ({
 			request,
 			log,
-			body: { message, history, reference: requestedReference }
+			body: { message, history, reference: requestedPage }
 		}) {
 			const references: Reference[] = []
-			if (requestedReference) {
+			if (requestedPage) {
 				const pages = (await retry(() =>
-					readPage(requestedReference)
+					cache(`page:${requestedPage}`, () =>
+						readPage(requestedPage)
+					)
 				)) as unknown as Reference[]
 
 				if (pages)
@@ -85,48 +89,54 @@ export const ai = new Elysia()
 
 			const response = await retry(
 				() =>
-					new Promise<AsyncGenerator<string, any, any>>(
-						async (resolve, reject) => {
-							const response = streamText({
-								model,
-								abortSignal: request.signal,
-								tools: {
-									readPage: readPageTool,
-									search: searchTool
-								},
-								stopWhen: stepCountIs(8),
-								messages: [
-									{
-										role: 'system',
-										content: instruct
-									},
-									...compactHistory,
-									{
-										role: 'user',
-										content: history?.length
-											? message
-											: `Hi Elysia chan! ${message}. Would you kindly help me?`
+					record(
+						'Gather Resources',
+						() =>
+							new Promise<AsyncGenerator<string, any, any>>(
+								async (resolve, reject) => {
+									const response = streamText({
+										model,
+										abortSignal: request.signal,
+										tools: {
+											readPage: readPageTool,
+											search: searchTool
+										},
+										stopWhen: stepCountIs(8),
+										messages: [
+											{
+												role: 'system',
+												content: instruct
+											},
+											...compactHistory,
+											{
+												role: 'user',
+												content: history?.length
+													? message
+													: `Hi Elysia chan! ${message}. Would you kindly help me?`
+											}
+										]
+									})
+
+									for await (const content of response.textStream) {
+										if (content.trim())
+											resolve(response.textStream as any)
 									}
-								]
-							})
 
-							for await (const content of response.textStream) {
-								if (content.trim())
-									resolve(response.textStream as any)
-							}
-
-							reject('Retry')
-						}
+									reject('Retry')
+								}
+							)
 					),
 				3,
 				0
 			)
 
+			const streamSpan = startSpan('Stream')
 			let i = 0
 			for await (const chunk of response) {
 				i += chunk.length
 				yield chunk
 			}
+			streamSpan.end()
 
 			const totalCharacter =
 				instruct.length +
@@ -139,6 +149,15 @@ export const ai = new Elysia()
 			log.info(`Output length: ${i} characters`)
 			log.info(`Estimate Input Token: ${~~(totalCharacter / 3)}`)
 			log.info(`Estimate Output Token: ${~~(i / 3)}`)
+
+			setAttributes({
+				'custom.question': message,
+				'custom.source_count': references.length,
+				'custom.input_length': totalCharacter,
+				'custom.output_length': i,
+				'custom.estimate_input_token': ~~(totalCharacter / 3),
+				'custom.estimate_output_token': ~~(i / 3)
+			})
 
 			const sources = deduplicateReferences(references).toSorted(
 				(a, b) => b.score - a.score

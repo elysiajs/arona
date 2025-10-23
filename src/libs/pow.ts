@@ -79,7 +79,7 @@ export const pow = new Elysia({
 		ip: true,
 		body: 'pow.ChallengeVerifyBody',
 		cookie: 'pow.ChallengeRecordCookie',
-		resolve({
+		resolve: function pow({
 			status,
 			ip,
 			body: {

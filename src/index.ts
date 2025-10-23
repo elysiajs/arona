@@ -6,6 +6,10 @@ import { openapi, fromTypes } from '@elysiajs/openapi'
 import { cors } from '@elysiajs/cors'
 import { cron } from '@elysiajs/cron'
 
+import { opentelemetry } from '@elysiajs/opentelemetry'
+import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-node'
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
+
 import { ai } from './modules'
 import { isDev, pow, structure } from './libs'
 
@@ -24,12 +28,27 @@ export const app = new Elysia({
 		})
 	)
 	.use(
+		opentelemetry({
+			spanProcessors: [
+				new BatchSpanProcessor(
+					new OTLPTraceExporter({
+						url: 'https://api.axiom.co/v1/traces',
+						headers: {
+							Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
+							'X-Axiom-Dataset': process.env.AXIOM_DATASET!
+						}
+					})
+				)
+			]
+		})
+	)
+	.use(
 		cors({
 			origin: ['http://localhost:5173', 'https://elysiajs.com']
 		})
 	)
 	.use(pow)
-	.get('/', () => file('public/arona.webp'))
+	.get('/', file('public/arona.webp'))
 	.get('/heath', 'ok')
 	.use(ai)
 
@@ -50,10 +69,7 @@ if (!isDev && cluster.isPrimary) {
 		})
 	)
 } else {
-	app.listen({
-		port: process.env.PORT ?? 3000,
-		host: '0.0.0.0'
-	})
+	app.listen(process.env.PORT ?? 3000)
 
 	console.log(
 		`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`

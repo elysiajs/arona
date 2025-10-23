@@ -1,3 +1,5 @@
+import { record } from '@elysiajs/opentelemetry'
+
 import { tool } from 'ai'
 import * as z from 'zod'
 
@@ -28,21 +30,24 @@ const referencesModel = referenceModel
 		description: 'The reference(s) retrieved from the page.'
 	})
 
-async function cache<T extends (...args: any) => any>(
+export async function cache<T extends (...args: any) => any>(
 	name: string,
 	fn: T
 ): Promise<Awaited<ReturnType<T>>> {
-	const cache = await redis.get(name)
-	if (cache) {
-		log(`Cache hit for '${name}'`)
+	return record(name, async () => {
+		const cache = await redis.get(name)
 
-		return JSON.parse(cache)
-	}
+		if (cache) {
+			log(`Cache hit for '${name}'`)
 
-	const result = await fn()
-	redis.set(name, JSON.stringify(result), 'EX', 3600)
+			return JSON.parse(cache)
+		}
 
-	return result
+		const result = await fn()
+		redis.set(name, JSON.stringify(result), 'EX', 3600)
+
+		return result
+	})
 }
 
 export const createSearchTool = (references: Reference[]) =>
