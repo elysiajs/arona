@@ -7,8 +7,7 @@ import { ip } from './ip'
 
 const CONFIG = {
 	POW_DIFFICULTY: 19,
-	CHALLENGE_EXPIRY_MS: 1.5 * 60_000,
-	TOKEN_EXPIRY_MS: 15 * 60_000
+	CHALLENGE_EXPIRY_MS: 15 * 60_000,
 } as const
 
 const secret = process.env.CHALLENGE_SECRET
