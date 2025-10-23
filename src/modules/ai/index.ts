@@ -5,6 +5,7 @@ import { streamText, stepCountIs } from 'ai'
 import {
 	API_KEY,
 	instruction,
+	isDev,
 	logger,
 	model,
 	pow,
@@ -42,7 +43,7 @@ export const ai = new Elysia()
 		}) {
 			const references: Reference[] = []
 			if (requestedReference) {
-				const pages = retry(() =>
+				const pages = await retry(() =>
 					readPage(requestedReference)
 				) as unknown as Reference[]
 
@@ -92,7 +93,7 @@ export const ai = new Elysia()
 									{
 										role: 'system',
 										content: references.length
-											? `${instruction}\nReferences:\n${references
+											? `${instruction}\nPage Data:\n${references
 													.map(
 														(x) =>
 															`# ${x.title}\n${x.content}`
@@ -153,7 +154,7 @@ export const ai = new Elysia()
 		{
 			AIRateLimit: true,
 			turnstile: true,
-			pow: true,
+			pow: !isDev,
 			headers: 'turnstile',
 			body: t.Object({
 				reference: t.Optional(t.String()),
