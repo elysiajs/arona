@@ -133,6 +133,7 @@ export const ai = new Elysia()
 				compactHistory.length +
 				references.map((x) => x.content).join(' ').length
 
+			log.info(`Question: '${message}'`)
 			log.info(`Sources: ${references.length}`)
 			log.info(`Input Length: ${totalCharacter}`)
 			log.info(`Output length: ${i} characters`)

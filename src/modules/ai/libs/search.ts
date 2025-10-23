@@ -38,7 +38,7 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 
 	return sql
 		.unsafe<Reference[]>(findReference, [`[${embedding.join(',')}]`])
-		.then((x) => x.filter((r) => r.score >= 0.425))
+		.then((x) => x.filter((r) => r.score >= 0.44))
 }
 
 export const deduplicateReferences = (references: Reference[]) => {
