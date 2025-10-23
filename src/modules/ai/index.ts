@@ -122,7 +122,11 @@ export const ai = new Elysia()
 				0
 			)
 
-			for await (const chunk of response) yield chunk
+			let i = 0
+			for await (const chunk of response) {
+				i += chunk.length
+				yield chunk
+			}
 
 			const totalCharacter =
 				instruct.length +
@@ -130,8 +134,10 @@ export const ai = new Elysia()
 				references.map((x) => x.content).join(' ').length
 
 			log.info(`Sources: ${references.length}`)
-			log.info(`Total Characters: ${totalCharacter}`)
-			log.info(`Estimate token: ${totalCharacter / 3}`)
+			log.info(`Input Length: ${totalCharacter}`)
+			log.info(`Output length: ${i} characters`)
+			log.info(`Estimate Input Token: ${~~(totalCharacter / 3)}`)
+			log.info(`Estimate Output Token: ${~~(i / 3)}`)
 
 			const sources = deduplicateReferences(references).toSorted(
 				(a, b) => b.score - a.score
