@@ -1,7 +1,25 @@
 import { embed } from 'ai'
 
-import { sql, retry, openai } from '@arona/libs'
-import { findReference, type Reference } from './sql'
+import { openai, retry, sql } from '@arona/libs'
+
+import type { Models } from './models'
+import { Reference, SQL } from './const'
+
+export const compressHistory = (history: Models.ask['history']) =>
+	history
+		?.map((x) => {
+			if (x.content.length < 2048) return x
+
+			const sourceIndex = x.content.lastIndexOf('Sources:\n')
+			const source =
+				sourceIndex !== -1 ? '\n\n' + x.content.slice(sourceIndex) : ''
+
+			return {
+				...x,
+				content: x.content.slice(0, 2048) + '...' + source
+			}
+		})
+		.slice(-8) ?? []
 
 export function normalizePage(file: string) {
 	if (file.includes('://')) file = file.slice(file.indexOf('/') + 11)
@@ -37,7 +55,7 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 	)
 
 	return sql
-		.unsafe<Reference[]>(findReference, [`[${embedding.join(',')}]`])
+		.unsafe<Reference[]>(SQL.findReference, [`[${embedding.join(',')}]`])
 		.then((x) => x.filter((r) => r.score >= 0.44))
 }
 

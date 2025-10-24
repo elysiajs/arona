@@ -1,6 +1,6 @@
 import { Elysia } from 'elysia'
 
-import { ip, isDev, redis, rateLimit as rateLimitFn } from '@arona/libs'
+import { ip, isDev, rateLimit as rateLimitFn } from '@arona/libs'
 
 export const rateLimit = new Elysia().use(ip).macro('AIRateLimit', {
 	ip: true,

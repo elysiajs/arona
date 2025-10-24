@@ -1,53 +1,20 @@
 import { record } from '@elysiajs/opentelemetry'
 
-import { tool } from 'ai'
+import {
+	type ModelMessage,
+	stepCountIs,
+	streamText,
+	type StreamTextOnFinishCallback,
+	tool,
+	jsonSchema
+} from 'ai'
 import * as z from 'zod'
 
-import { retry, redis, log } from '@arona/libs'
-import { search, readPage, normalizePage } from './search'
-import type { Reference } from './sql'
+import { retry, redis, log, cache, model, instruction } from '@arona/libs'
 
-const referenceModel = z.object({
-	link: z
-		.string()
-		.describe('The link of the page to read from Elysia documentation')
-		.meta({
-			examples: [
-				'/essential/life-cycle',
-				'/essential/life-cycle#transform'
-			]
-		}),
-	title: z.string().describe('The title of the page'),
-	content: z.string().describe('The content excerpt of the page'),
-	score: z.number().describe('The relevance score of the page')
-})
-
-const referencesModel = referenceModel
-	.or(z.array(referenceModel))
-	.nullable()
-	.meta({
-		description: 'The reference(s) retrieved from the page.'
-	})
-
-export async function cache<T extends (...args: any) => any>(
-	name: string,
-	fn: T
-): Promise<Awaited<ReturnType<T>>> {
-	return record(name, async () => {
-		const cache = await redis.get(name)
-
-		if (cache) {
-			log(`Cache hit for '${name}'`)
-
-			return JSON.parse(cache)
-		}
-
-		const result = await fn()
-		redis.set(name, JSON.stringify(result), 'EX', 3600)
-
-		return result
-	})
-}
+import { Models } from './models'
+import type { Reference } from './const'
+import { compressHistory, normalizePage, search, readPage } from './utils'
 
 export const createSearchTool = (references: Reference[]) =>
 	tool({
@@ -62,7 +29,7 @@ export const createSearchTool = (references: Reference[]) =>
 					examples: ['handler', 'OpenAPI type gen', 'Eden Treaty']
 				})
 		}),
-		outputSchema: referencesModel,
+		outputSchema: Models.references,
 		async execute({ sentence }) {
 			log('Search:', sentence)
 
@@ -101,7 +68,7 @@ export const createPageTool = (references: Reference[]) =>
 				]
 			})
 		}),
-		outputSchema: referencesModel,
+		outputSchema: Models.references,
 		async execute({ link }) {
 			link = normalizePage(link)
 
@@ -119,3 +86,118 @@ export const createPageTool = (references: Reference[]) =>
 			return documents
 		}
 	})
+
+interface AskParams {
+	abortSignal: AbortSignal
+	seed?: number
+	message: string
+	history: Models.ask['history']
+	references: Reference[]
+	ip: string
+	onFinish?: StreamTextOnFinishCallback<{}>
+}
+
+export async function ask({
+	abortSignal,
+	seed,
+	message,
+	history,
+	references,
+	ip,
+	onFinish
+}: AskParams) {
+	const searchTool = createSearchTool(references)
+	const readPageTool = createPageTool(references)
+
+	const stream = await retry(
+		() =>
+			record(
+				'Gather Resources',
+				() =>
+					new Promise<AsyncGenerator<string, any, any>>(
+						async (resolve, reject) => {
+							const response = streamText({
+								model,
+								abortSignal,
+								tools: {
+									readPage: readPageTool,
+									search: searchTool
+								},
+								stopWhen: stepCountIs(8),
+								seed,
+								messages: [
+									{
+										role: 'system',
+										content: references.length
+											? `${instruction}\nPage Data:\n${references
+													.map(
+														(x) =>
+															`# ${x.title}\n${x.content}`
+													)
+													.join('\n')}`
+											: instruction
+									},
+									...compressHistory(history),
+									{
+										role: 'user',
+										content: history?.length
+											? message
+											: `Hi Elysia chan! ${message}. Would you kindly help me?`
+									}
+								],
+								providerOptions: {
+									groq: {
+										reasoningFormat: 'hidden',
+										reasoningEffort: 'low',
+										user: ip,
+										serviceTier: 'auto'
+									}
+								},
+								onFinish(metadata) {
+									onFinish?.(metadata as any)
+
+									log({
+										question: message,
+										sources: references.length
+									})
+									log(metadata.usage)
+								}
+							})
+
+							for await (const content of response.textStream)
+								if (content.trim())
+									resolve(response.textStream as any)
+
+							reject('Retry')
+						}
+					)
+			),
+		3,
+		0
+	)
+
+	return stream
+}
+
+export const createMessages = (
+	message: string,
+	references: Reference[],
+	history: Models.ask['history']
+) =>
+	[
+		{
+			role: 'system',
+			content: references.length
+				? `${instruction}\nPage Data:\n${references
+						.map((x) => `# ${x.title}\n${x.content}`)
+						.join('\n')}`
+				: instruction
+		},
+		...compressHistory(history),
+		{
+			role: 'user',
+			content: history?.length
+				? message
+				: `Hi Elysia chan! ${message}. Would you kindly help me?`
+		}
+	] as ModelMessage[]

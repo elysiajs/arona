@@ -1,36 +1,29 @@
-import { Elysia, t, NotFoundError } from 'elysia'
-import { record, setAttributes, startSpan } from '@elysiajs/opentelemetry'
-
-import { streamText, stepCountIs, type LanguageModelUsage } from 'ai'
+import { Elysia, t } from 'elysia'
+import { setAttributes, startSpan } from '@elysiajs/opentelemetry'
 
 import {
 	API_KEY,
-	instruction,
+	cache,
 	isDev,
 	logger,
-	model,
 	pow,
 	retry,
 	structure,
 	turnstile
 } from '@arona/libs'
 import {
-	cache,
-	createPageTool,
-	createSearchTool,
+	ask,
 	deduplicateReferences,
+	Models,
 	rateLimit,
 	readPage,
 	type Reference
 } from './libs'
 
 export const ai = new Elysia()
-	.use(turnstile)
-	.use(pow)
-	.use(rateLimit)
-	.use(logger.into())
-	.patch('/database/index', async ({ headers }) => {
-		if (headers['x-api-key'] !== API_KEY) throw new NotFoundError()
+	.use([logger.into(), rateLimit, pow, turnstile])
+	.patch('/database/index', async ({ headers, status }) => {
+		if (headers['x-api-key'] !== API_KEY) return status(404)
 
 		await structure()
 
@@ -73,189 +66,74 @@ export const ai = new Elysia()
 		async function* ({
 			request,
 			body: { seed, message, history, reference: requestedPage },
-			headers,
-			ip,
-			log
+			ip
 		}) {
 			const references: Reference[] = []
 			if (requestedPage) {
-				const pages = (await retry(() =>
-					cache(`page:${requestedPage}`, () =>
-						readPage(requestedPage)
+				const pages = await retry(() =>
+					cache(
+						`page:${requestedPage}`,
+						() => readPage(requestedPage) as unknown as Reference[]
 					)
-				)) as unknown as Reference[]
+				)
 
 				if (pages)
 					references.push(
 						...pages.map((page) => ({
 							...page,
-							score: 1 // Highest priority
+							score: 1
 						}))
 					)
 			}
 
-			const searchTool = createSearchTool(references)
-			const readPageTool = createPageTool(references)
-
-			const compactHistory =
-				history
-					?.map((x) => {
-						if (x.content.length < 2048) return x
-
-						const sourceIndex = x.content.lastIndexOf('Sources:\n')
-						const source =
-							sourceIndex !== -1
-								? '\n\n' + x.content.slice(sourceIndex)
-								: ''
-
-						return {
-							...x,
-							content: x.content.slice(0, 2048) + '...' + source
-						}
-					})
-					.slice(-8) ?? []
-
-			const instruct = references.length
-				? `${instruction}\nPage Data:\n${references
-						.map((x) => `# ${x.title}\n${x.content}`)
-						.join('\n')}`
-				: instruction
-
-			let usage: LanguageModelUsage | undefined
 			let logId: string | undefined
+			const stream = await ask({
+				abortSignal: request.signal,
+				seed,
+				message,
+				history,
+				references,
+				ip,
+				onFinish({ usage, response }) {
+					logId = response.headers?.['cf-aig-log-id']
 
-			const response = await retry(
-				() =>
-					record(
-						'Gather Resources',
-						() =>
-							new Promise<AsyncGenerator<string, any, any>>(
-								async (resolve, reject) => {
-									const response = streamText({
-										model,
-										abortSignal: request.signal,
-										tools: {
-											readPage: readPageTool,
-											search: searchTool
-										},
-										stopWhen: stepCountIs(8),
-										seed,
-										messages: [
-											{
-												role: 'system',
-												content: instruct
-											},
-											...compactHistory,
-											{
-												role: 'user',
-												content: history?.length
-													? message
-													: `Hi Elysia chan! ${message}. Would you kindly help me?`
-											}
-										],
-										providerOptions: {
-											groq: {
-												reasoningFormat: 'hidden',
-												reasoningEffort: 'low',
-												user: ip,
-												serviceTier: 'auto'
-											}
-										},
-										onFinish({ usage: _usage, response }) {
-											usage = _usage
-											logId =
-												response.headers?.[
-													'cf-aig-log-id'
-												]
-
-											log.info({
-												question: message,
-												sources: references.length
-											})
-											log.info(usage)
-										}
-									})
-
-									for await (const content of response.textStream)
-										if (content.trim())
-											resolve(response.textStream as any)
-
-									reject('Retry')
-								}
-							)
-					),
-				3,
-				0
-			)
+					setAttributes({
+						'ai.question': message,
+						'ai.references': references.length,
+						'ai.input_tokens': usage.inputTokens,
+						'ai.cached_input_tokens': usage.cachedInputTokens,
+						'ai.output_tokens': usage.outputTokens,
+						'ai.reasoning_tokens': usage.reasoningTokens,
+						'ai.total_tokens': usage.totalTokens,
+						'ai.cf_log_id': logId
+					})
+				}
+			})
 
 			const streamSpan = startSpan('Stream')
-			let i = 0
-			for await (const chunk of response) {
-				i += chunk.length
-				yield chunk
-			}
+			for await (const chunk of stream) yield chunk
 			streamSpan.end()
-
-			if (usage)
-				setAttributes({
-					'ai.question': message,
-					'ai.references': references.length,
-					'ai.input_tokens': usage.inputTokens,
-					'ai.cached_input_tokens': usage.cachedInputTokens,
-					'ai.output_tokens': usage.outputTokens,
-					'ai.reasoning_tokens': usage.reasoningTokens,
-					'ai.total_tokens': usage.totalTokens,
-					// @ts-ignore
-					'ai.cf_log_id': logId
-				})
 
 			const sources = deduplicateReferences(references).toSorted(
 				(a, b) => b.score - a.score
 			)
 
-			if (sources.length) {
-				const referencedFiles = new Set<string>()
-
+			if (sources.length)
 				sources
-					.filter((source) =>
-						referencedFiles.has(source.file)
-							? false
-							: referencedFiles.add(source.file)
-					)
 					.map(
 						(source) =>
 							`- [${source.title} - ${source.file.slice(5, -3)}](https://elysiajs.com/${source.link})`
 					)
 					.join('\n')
-			}
 
 			yield `\n- id:${logId ?? 'UNKNOWN'}`
 		},
 		{
+			headers: 'turnstile',
+			body: Models.ask,
 			parse: 'json',
 			AIRateLimit: true,
 			turnstile: true,
-			pow: !isDev,
-			headers: 'turnstile',
-			body: t.Object({
-				seed: t.Optional(t.Number()),
-				reference: t.Optional(t.String()),
-				message: t.String({
-					maxLength: 4096
-				}),
-				history: t.Optional(
-					t.Array(
-						t.Object({
-							role: t.UnionEnum(['user', 'assistant']),
-							content: t.String({
-								maxLength: 16384
-							})
-						}),
-						{
-							maxItems: 16
-						}
-					)
-				)
-			})
+			pow: !isDev
 		}
 	)

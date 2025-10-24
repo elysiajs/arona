@@ -5,4 +5,5 @@ export const logger = createPinoLogger({
 	timestamp: false,
 	base: null
 })
-export const log = (...args: string[]) => logger.info(args.join(' '))
+export const log = (...args: unknown[]) =>
+	logger.info(args.join(' '))
