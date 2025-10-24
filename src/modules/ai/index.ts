@@ -188,7 +188,7 @@ export const ai = new Elysia()
 						)
 						.map(
 							(source) =>
-								`- [${source.file.slice(5, -3)} - ${source.title}](https://elysiajs.com/${source.link})`
+								`- [${source.title} - ${source.file.slice(5, -3)}](https://elysiajs.com/${source.link})`
 						)
 						.join('\n')
 			}
