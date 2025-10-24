@@ -31,7 +31,7 @@ export const turnstile = new Elysia()
 						'Missing verification token. Please try reloading the page.'
 				})
 
-			const limit = await rateLimit('ip', 8, 35)
+			const limit = await rateLimit(`ip:${ip}`, 8, 35)
 			if (!limit.allowed) {
 				set.headers['Retry-After'] = limit.retryAfter / 1000
 				set.headers['X-RateLimit-Limit'] = 6
