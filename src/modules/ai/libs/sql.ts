@@ -20,11 +20,6 @@ FROM doc_chunks as d, q
 ORDER BY score DESC
 LIMIT 8;`
 
-export interface DocFile {
-	title: string
-	content: string
-}
-
 export interface Reference {
 	link: string
 	file: string
