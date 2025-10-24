@@ -179,18 +179,17 @@ export const ai = new Elysia()
 			if (sources.length) {
 				const referencedFiles = new Set<string>()
 
-				yield '\n\nSources:\n' +
-					sources
-						.filter((source) =>
-							referencedFiles.has(source.file)
-								? false
-								: referencedFiles.add(source.file)
-						)
-						.map(
-							(source) =>
-								`- [${source.title} - ${source.file.slice(5, -3)}](https://elysiajs.com/${source.link})`
-						)
-						.join('\n')
+				sources
+					.filter((source) =>
+						referencedFiles.has(source.file)
+							? false
+							: referencedFiles.add(source.file)
+					)
+					.map(
+						(source) =>
+							`- [${source.title} - ${source.file.slice(5, -3)}](https://elysiajs.com/${source.link})`
+					)
+					.join('\n')
 			}
 		},
 		{
