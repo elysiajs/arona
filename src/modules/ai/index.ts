@@ -36,6 +36,38 @@ export const ai = new Elysia()
 
 		return 'ok'
 	})
+	.use((app) => {
+		const GATEWAY_ID = process.env.AI_GATEWAY_ID
+		const ACCOUNT_ID = process.env.CF_ACCOUNT_ID
+
+		if (!ACCOUNT_ID || !GATEWAY_ID) return app
+
+		return app.post(
+			'/feedback/:id',
+			({ body, status, params: { id } }) =>
+				retry(() =>
+					fetch(
+						`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/ai-gateway/gateways/${GATEWAY_ID}/logs/${id}`,
+						{
+							method: 'PATCH',
+							headers: {
+								'Content-Type': 'application/json',
+								Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`
+							},
+							body: JSON.stringify({
+								feedback: body ? 1 : -1
+							})
+						}
+					)
+				)
+					.then(() => body)
+					.catch(() => status(418)),
+			{
+				parse: 'text',
+				body: t.Boolean()
+			}
+		)
+	})
 	.post(
 		'/ask',
 		async function* ({
@@ -90,6 +122,7 @@ export const ai = new Elysia()
 				: instruction
 
 			let usage: LanguageModelUsage | undefined
+			let logId: string | undefined
 
 			const response = await retry(
 				() =>
@@ -128,8 +161,12 @@ export const ai = new Elysia()
 												serviceTier: 'auto'
 											}
 										},
-										onFinish({ usage: _usage }) {
+										onFinish({ usage: _usage, response }) {
 											usage = _usage
+											logId =
+												response.headers?.[
+													'cf-aig-log-id'
+												]
 
 											log.info({
 												question: message,
@@ -169,7 +206,7 @@ export const ai = new Elysia()
 					'ai.reasoning_tokens': usage.reasoningTokens,
 					'ai.total_tokens': usage.totalTokens,
 					// @ts-ignore
-					'ai.cf_log_id': headers['cf-aig-log-id']
+					'ai.cf_log_id': logId
 				})
 
 			const sources = deduplicateReferences(references).toSorted(
@@ -191,8 +228,11 @@ export const ai = new Elysia()
 					)
 					.join('\n')
 			}
+
+			yield `\n- id:${logId ?? 'UNKNOWN'}`
 		},
 		{
+			parse: 'json',
 			AIRateLimit: true,
 			turnstile: true,
 			pow: !isDev,
