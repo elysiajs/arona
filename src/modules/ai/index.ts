@@ -1,7 +1,7 @@
 import { Elysia, t, NotFoundError } from 'elysia'
 import { record, setAttributes, startSpan } from '@elysiajs/opentelemetry'
 
-import { streamText, stepCountIs } from 'ai'
+import { streamText, stepCountIs, type LanguageModelUsage } from 'ai'
 
 import {
 	API_KEY,
@@ -40,9 +40,10 @@ export const ai = new Elysia()
 		'/ask',
 		async function* ({
 			request,
-			log,
-			body: { message, history, reference: requestedPage },
-			ip
+			body: { seed, message, history, reference: requestedPage },
+			headers,
+			ip,
+			log
 		}) {
 			const references: Reference[] = []
 			if (requestedPage) {
@@ -88,6 +89,8 @@ export const ai = new Elysia()
 						.join('\n')}`
 				: instruction
 
+			let usage: LanguageModelUsage | undefined
+
 			const response = await retry(
 				() =>
 					record(
@@ -103,6 +106,7 @@ export const ai = new Elysia()
 											search: searchTool
 										},
 										stopWhen: stepCountIs(8),
+										seed,
 										messages: [
 											{
 												role: 'system',
@@ -119,32 +123,19 @@ export const ai = new Elysia()
 										providerOptions: {
 											groq: {
 												reasoningFormat: 'hidden',
-												reasoningEffort: 'medium',
-												user: ip
+												reasoningEffort: 'low',
+												user: ip,
+												serviceTier: 'auto'
 											}
 										},
-										onFinish({ usage }) {
+										onFinish({ usage: _usage }) {
+											usage = _usage
+
 											log.info({
 												question: message,
 												sources: references.length
 											})
 											log.info(usage)
-
-											setAttributes({
-												'custom.question': message,
-												'custom.references':
-													references.length,
-												'custom.input_tokens':
-													usage.inputTokens,
-												'custom.cached_input_tokens':
-													usage.cachedInputTokens,
-												'custom.output_tokens':
-													usage.outputTokens,
-												'custom.reasoning_tokens':
-													usage.reasoningTokens,
-												'custom.total_tokens':
-													usage.totalTokens
-											})
 										}
 									})
 
@@ -167,6 +158,19 @@ export const ai = new Elysia()
 				yield chunk
 			}
 			streamSpan.end()
+
+			if (usage)
+				setAttributes({
+					'ai.question': message,
+					'ai.references': references.length,
+					'ai.input_tokens': usage.inputTokens,
+					'ai.cached_input_tokens': usage.cachedInputTokens,
+					'ai.output_tokens': usage.outputTokens,
+					'ai.reasoning_tokens': usage.reasoningTokens,
+					'ai.total_tokens': usage.totalTokens,
+					// @ts-ignore
+					'ai.cf_log_id': headers['cf-aig-log-id']
+				})
 
 			const sources = deduplicateReferences(references).toSorted(
 				(a, b) => b.score - a.score
@@ -195,6 +199,7 @@ export const ai = new Elysia()
 			pow: !isDev,
 			headers: 'turnstile',
 			body: t.Object({
+				seed: t.Optional(t.Number()),
 				reference: t.Optional(t.String()),
 				message: t.String({
 					maxLength: 4096

@@ -7,12 +7,22 @@ if (!oaiKey) throw new Error('OPENAI_API_KEY is not set')
 const groqKey = process.env.GROQ_API_KEY
 if (!groqKey) throw new Error('GROQ_API_KEY is not set')
 
+const aiGatewayKey = process.env.AI_GATEWAY_KEY
+
 export const openai = createOpenAI({
-	apiKey: oaiKey
+	apiKey: oaiKey,
+	baseURL: process.env.OPENAI_GATEWAY,
+	headers: {
+		'cf-aig-authorization': `Bearer ${aiGatewayKey}`
+	}
 })
 
 export const groq = createGroq({
-	apiKey: groqKey
+	apiKey: groqKey,
+	baseURL: process.env.GROQ_GATEWAY,
+	headers: {
+		'cf-aig-authorization': `Bearer ${aiGatewayKey}`
+	}
 })
 
 export const model = groq('openai/gpt-oss-120b')
@@ -43,8 +53,8 @@ Behavior:
 Constraints:
 - Use tool to search for references to answer questions.
 - References is provided in English, if the question is in another language, translate it first.
-- All tools are pure (deterministic), Do not call them twice with the same parameters.
-- NEVER call the same tool with the same parameter, reuse the data instead.
+- All tools are deterministic (pure), Do not call them twice with the same parameters.
+- Call tools in parallel when possible to reduce latency.
 - If the question is unrelated to Elysia, politely decline to answer unless small talk.
 - Make sure that code snippets are complete and functional.
 - Answer in markdown format for better readability.
