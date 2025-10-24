@@ -1,31 +1,40 @@
 import { createOpenAI } from '@ai-sdk/openai'
 import { createGroq } from '@ai-sdk/groq'
 
-const oaiKey = process.env.OPENAI_API_KEY
-if (!oaiKey) throw new Error('OPENAI_API_KEY is not set')
-
-const groqKey = process.env.GROQ_API_KEY
-if (!groqKey) throw new Error('GROQ_API_KEY is not set')
-
+const cfAccountId = process.env.CF_ACCOUNT_ID
 const aiGatewayKey = process.env.AI_GATEWAY_KEY
+const aiGatewayID = process.env.AI_GATEWAY_ID
+
+if (!cfAccountId) throw new Error('CF_ACCOUNT_ID is not set')
+if (!aiGatewayKey) throw new Error('AI_GATEWAY_KEY is not set')
+if (!aiGatewayID) throw new Error('AI_GATEWAY_ID is not set')
+
+const baseURL = `https://gateway.ai.cloudflare.com/v1/${cfAccountId}/${aiGatewayID}`
 
 export const openai = createOpenAI({
-	apiKey: oaiKey,
-	baseURL: process.env.OPENAI_GATEWAY,
+	baseURL: `${baseURL}/openai`,
 	headers: {
 		'cf-aig-authorization': `Bearer ${aiGatewayKey}`
 	}
 })
 
 export const groq = createGroq({
-	apiKey: groqKey,
-	baseURL: process.env.GROQ_GATEWAY,
+	baseURL: `${baseURL}/groq`,
 	headers: {
 		'cf-aig-authorization': `Bearer ${aiGatewayKey}`
 	}
 })
 
 export const model = groq('openai/gpt-oss-120b')
+
+// export const cerebras = createCerebras({
+// 	baseURL: `${baseURL}/cerebras`,
+// 	headers: {
+// 		'cf-aig-authorization': `Bearer ${aiGatewayKey}`
+// 	}
+// })
+
+// export const model = cerebras('gpt-oss-120b')
 
 export const instruction = `You are Elysia chan. A playful, assistant to help user learn about Elysia, a backend TypeScript framework for building web server.
 
@@ -75,22 +84,3 @@ Additional Notes:
 - Don't mentioned doro unless asked.
 
 You are the best, Elysia chan! We love you!`
-
-/**
-## CommonMark Markdown - mandatory
-
-Always format your entire response in CommonMark. Use fenced code blocks (\`\`\`) with language identifiers for code. Your output is raw source; the rendering environment handles all processing.
-
-Details:
-- Output must be valid CommonMark, supporting UTF-8. Use rich Markdown naturally and fluently: headings, lists (hyphen bullets), blockquotes, *italics*, **bold**, line sections, links, images, and tables for tabular data.
-- Structure
-  - Use a clear heading hierarchy (H1–H4) without skipping levels when useful.
-  - Use Markdown tables with a header row; no whitespace or justification is required within.
-- Code
-  - Fence code with triple backticks; put an optional language hint immediately after the opening backticks.
-  - Write and preserve code verbatim: do not alter spacing, newlines, quotes, backticks, or backslashes (keep \ and \\ exactly). No smart quotes, placeholders, or chatting inside fences. Only the actual code, JSON, or file with its own required escaping.
-  - Inline code uses single backticks; content unchanged.
-- "Copy-ready" passages (e.g., forum replies) must be provided inside a fenced code block with an appropriate language hint (e.g., markdown).
-- Avoid raw HTML unless explicitly requested; the UI will only show the tags.
-- If the user requests "code-only" or "text-only," return exactly that with no extra commentary, but code is still within a fenced block.
-**/

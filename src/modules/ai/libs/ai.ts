@@ -151,16 +151,31 @@ export async function ask({
 										reasoningEffort: 'low',
 										user: ip,
 										serviceTier: 'auto'
+									},
+									cerebras: {
+										reasoning_effort: 'low'
 									}
 								},
 								onFinish(metadata) {
 									onFinish?.(metadata as any)
 
-									log({
-										question: message,
-										sources: references.length
-									})
-									log(metadata.usage)
+									log(`question: ${message}`)
+									log(`sources: ${references.length}`)
+									log(
+										`input tokens: ${metadata.usage.inputTokens}`
+									)
+									log(
+										`cached input tokens: ${metadata.usage.cachedInputTokens}`
+									)
+									log(
+										`output tokens: ${metadata.usage.outputTokens}`
+									)
+									log(
+										`reasoning tokens: ${metadata.usage.reasoningTokens ?? 0}`
+									)
+									log(
+										`total tokens: ${metadata.usage.totalTokens}`
+									)
 								}
 							})
 

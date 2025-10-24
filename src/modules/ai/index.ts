@@ -1,4 +1,4 @@
-import { Elysia, t } from 'elysia'
+import { Elysia, ElysiaCustomStatusResponse, t } from 'elysia'
 import { setAttributes, startSpan } from '@elysiajs/opentelemetry'
 
 import {
@@ -103,12 +103,17 @@ export const ai = new Elysia()
 						'ai.input_tokens': usage.inputTokens,
 						'ai.cached_input_tokens': usage.cachedInputTokens,
 						'ai.output_tokens': usage.outputTokens,
-						'ai.reasoning_tokens': usage.reasoningTokens,
+						'ai.reasoning_tokens': usage.reasoningTokens ?? 0,
 						'ai.total_tokens': usage.totalTokens,
 						'ai.cf_log_id': logId
 					})
 				}
-			})
+			}).catch((err) => new Error(err))
+
+			if (stream instanceof Error) {
+				yield 'Elysia chan is feeling a bit under the weather right now. Please try again later!'
+				return
+			}
 
 			const streamSpan = startSpan('Stream')
 			for await (const chunk of stream) yield chunk
