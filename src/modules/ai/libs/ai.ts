@@ -13,8 +13,8 @@ import * as z from 'zod'
 import { retry, redis, log, cache, model, instruction } from '@arona/libs'
 
 import { Models } from './models'
-import type { Reference } from './const'
 import { compressHistory, normalizePage, search, readPage } from './utils'
+import type { Reference } from './const'
 
 export const createSearchTool = (references: Reference[]) =>
 	tool({

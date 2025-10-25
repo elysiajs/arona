@@ -124,12 +124,13 @@ export const ai = new Elysia()
 			)
 
 			if (sources.length)
-				sources
+				yield sources
 					.map(
 						(source) =>
 							`- [${source.title} - ${source.file.slice(5, -3)}](https://elysiajs.com/${source.link})`
 					)
 					.join('\n')
+			else yield '\n'
 
 			yield `\n- id:${logId ?? 'UNKNOWN'}`
 		},
