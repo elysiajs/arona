@@ -45,7 +45,7 @@ export const ai = new Elysia()
 							method: 'PATCH',
 							headers: {
 								'Content-Type': 'application/json',
-								Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`
+								Authorization: `Bearer ${process.env.AI_GATEWAY_KEY}`
 							},
 							body: JSON.stringify({
 								feedback: body ? 1 : -1
