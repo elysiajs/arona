@@ -94,11 +94,16 @@ export const ai = new Elysia()
 				history,
 				references,
 				ip,
-				onFinish({ usage, response }) {
+				onFinish({ usage, response, content }) {
 					logId = response.headers?.['cf-aig-log-id']
+					const answer = content[0]
 
 					setAttributes({
 						'ai.question': message,
+						'ai.response':
+							answer.type === 'text'
+								? answer.text
+								: JSON.stringify(answer),
 						'ai.references': references.length,
 						'ai.input_tokens': usage.inputTokens,
 						'ai.cached_input_tokens': usage.cachedInputTokens,
