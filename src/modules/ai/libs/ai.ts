@@ -1,12 +1,12 @@
 import { record } from '@elysiajs/opentelemetry'
+import { wrapTool } from 'axiom/ai'
 
 import {
 	type ModelMessage,
 	stepCountIs,
 	streamText,
 	type StreamTextOnFinishCallback,
-	tool,
-	jsonSchema
+	tool
 } from 'ai'
 import * as z from 'zod'
 

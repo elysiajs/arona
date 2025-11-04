@@ -20,6 +20,7 @@
 		"@opentelemetry/sdk-trace-node": "^2.2.0",
 		"@simplewebauthn/server": "^13.2.2",
 		"ai": "^5.0.76",
+		"axiom": "^0.23.0",
 		"elysia": "^1.4.13",
 		"pino-opentelemetry-transport": "^1.1.0",
 		"zod": "^4.1.12"

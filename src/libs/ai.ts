@@ -1,6 +1,11 @@
 import { createOpenAI } from '@ai-sdk/openai'
 import { createGroq } from '@ai-sdk/groq'
 
+import { initAxiomAI, wrapAISDKModel } from 'axiom/ai'
+import { getTracer } from '@elysiajs/opentelemetry'
+
+initAxiomAI({ tracer: getTracer() })
+
 const cfAccountId = process.env.CF_ACCOUNT_ID
 const aiGatewayKey = process.env.AI_GATEWAY_KEY
 const aiGatewayID = process.env.AI_GATEWAY_ID
@@ -25,7 +30,7 @@ export const groq = createGroq({
 	}
 })
 
-export const model = groq('openai/gpt-oss-120b')
+export const model = wrapAISDKModel(groq('openai/gpt-oss-120b'))
 
 // export const cerebras = createCerebras({
 // 	baseURL: `${baseURL}/cerebras`,
