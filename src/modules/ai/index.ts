@@ -128,6 +128,8 @@ export const ai = new Elysia()
 				(a, b) => b.score - a.score
 			)
 
+			yield '\n'
+
 			if (sources.length)
 				yield sources
 					.map(
@@ -135,7 +137,6 @@ export const ai = new Elysia()
 							`- [${source.title} - ${source.file.slice(5, -3)}](https://elysiajs.com/${source.link})`
 					)
 					.join('\n')
-			else yield '\n'
 
 			yield `\n- id:${logId ?? 'UNKNOWN'}`
 		},
