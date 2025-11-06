@@ -129,8 +129,8 @@ export const structure = async () => {
 
 		totalOps++
 
-		const currentFiles = await sql.unsafe<Chunk[]>(
-			`SELECT file, content FROM doc_chunks WHERE file IN (${chunk.map((c) => `'${c.file}'`).join(', ')})`
+		const currentFiles = await sql.unsafe<(Chunk & { link: string })[]>(
+			`SELECT file, content, link FROM doc_chunks WHERE file IN (${chunk.map((c) => `'${c.file}'`).join(', ')})`
 		)
 
 		function format(x: string) {
@@ -190,6 +190,8 @@ export const structure = async () => {
 		)
 
 		const currentChapters = index(currentFiles)
+		for (let i = 0; i < currentFiles.length; i++)
+			currentChapters[i].link = currentFiles[i].link
 
 		const chapters: typeof newChapters = []
 		const toRemove: typeof currentChapters = []
@@ -199,8 +201,9 @@ export const structure = async () => {
 				(c) => c.link === newChapter.link
 			)
 
-			if (existIndex === -1) chapters.push(newChapter)
-			else if (
+			if (existIndex === -1) {
+				chapters.push(newChapter)
+			} else if (
 				// set to true to reindex all
 				// true
 				currentChapters[existIndex].content !== newChapter.content
@@ -210,7 +213,7 @@ export const structure = async () => {
 
 		for (const currentChapter of currentChapters) {
 			const existIndex = newChapters.findIndex(
-				(c) => c.title === currentChapter.title
+				(c) => c.link === currentChapter.link
 			)
 
 			if (existIndex === -1) toRemove.push(currentChapter)
