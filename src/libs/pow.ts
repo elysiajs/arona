@@ -55,7 +55,7 @@ export const pow = new Elysia({
 			const issued = Date.now()
 
 			challenge.set({
-				maxAge: CONFIG.CHALLENGE_EXPIRY_MS,
+				maxAge: CONFIG.CHALLENGE_EXPIRY_MS / 1000,
 				value: {
 					nonce,
 					ip,
