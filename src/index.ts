@@ -19,7 +19,7 @@ export const app = new Elysia({
 		sameSite: 'strict',
 		secure: process.env.NODE_ENV === 'production',
 		secrets: process.env.CHALLENGE_SECRET,
-		sign: ['challenge']
+		// sign: ['challenge']
 	}
 })
 	.use(
