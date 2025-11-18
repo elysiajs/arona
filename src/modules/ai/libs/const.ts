@@ -19,7 +19,7 @@ export const SQL = Object.freeze({
 	) AS score
 	FROM doc_chunks as d, q
 	ORDER BY score DESC
-	LIMIT 8;`
+	LIMIT 12;`
 } as const)
 
 export interface Reference {
