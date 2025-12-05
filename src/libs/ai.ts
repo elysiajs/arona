@@ -9,7 +9,9 @@ initAxiomAI({ tracer: getTracer() })
 const cfAccountId = process.env.CF_ACCOUNT_ID
 const aiGatewayKey = process.env.AI_GATEWAY_KEY
 const aiGatewayID = process.env.AI_GATEWAY_ID
+const oaiKey = process.env.OPENAI_API_KEY
 
+if (!oaiKey) throw new Error('OPENAI_API_KEY is not set')
 if (!cfAccountId) throw new Error('CF_ACCOUNT_ID is not set')
 if (!aiGatewayKey) throw new Error('AI_GATEWAY_KEY is not set')
 if (!aiGatewayID) throw new Error('AI_GATEWAY_ID is not set')
@@ -17,10 +19,11 @@ if (!aiGatewayID) throw new Error('AI_GATEWAY_ID is not set')
 const baseURL = `https://gateway.ai.cloudflare.com/v1/${cfAccountId}/${aiGatewayID}`
 
 export const openai = createOpenAI({
-	baseURL: `${baseURL}/openai`,
-	headers: {
-		'cf-aig-authorization': `Bearer ${aiGatewayKey}`
-	}
+	apiKey: oaiKey
+	// baseURL: `${baseURL}/openai`,
+	// headers: {
+	// 	'cf-aig-authorization': `Bearer ${aiGatewayKey}`
+	// }
 })
 
 export const groq = createGroq({
