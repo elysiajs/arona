@@ -5,8 +5,7 @@ import {
 	stepCountIs,
 	streamText,
 	type StreamTextOnFinishCallback,
-	tool,
-	zodSchema
+	tool
 } from 'ai'
 import * as z from 'zod'
 
@@ -157,8 +156,8 @@ export async function ask({
 									},
 									cerebras: {
 										reasoning_effort: think
-											? 'medium'
-											: 'low'
+											? 'high'
+											: 'medium'
 									}
 								},
 								onFinish(metadata) {
