@@ -157,7 +157,7 @@ export async function ask({
 									cerebras: {
 										reasoning_effort: think
 											? 'high'
-											: 'medium'
+											: 'low'
 									}
 								},
 								onFinish(metadata) {
