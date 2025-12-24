@@ -1,10 +1,15 @@
-import { Elysia, ElysiaCustomStatusResponse, t } from 'elysia'
-import { setAttributes, startSpan } from '@elysiajs/opentelemetry'
+import { Elysia, t } from 'elysia'
+import {
+	getCurrentSpan,
+	setAttributes,
+	startSpan
+} from '@elysiajs/opentelemetry'
 
 import {
 	API_KEY,
 	cache,
 	isDev,
+	log,
 	logger,
 	pow,
 	retry,
@@ -65,7 +70,7 @@ export const ai = new Elysia()
 		'/ask',
 		async function* ({
 			request,
-			body: { seed, message, history, reference: requestedPage },
+			body: { seed, message, history, reference: requestedPage, think },
 			ip
 		}) {
 			const references: Reference[] = []
@@ -94,6 +99,7 @@ export const ai = new Elysia()
 				history,
 				references,
 				ip,
+				think,
 				onFinish({ usage, response, content }) {
 					logId = response.headers?.['cf-aig-log-id']
 					const answer = content[0]
@@ -106,9 +112,28 @@ export const ai = new Elysia()
 								: JSON.stringify(answer),
 						'ai.references': references.length,
 						'ai.input_tokens': usage.inputTokens,
-						'ai.cached_input_tokens': usage.cachedInputTokens,
+						'ai.cached_input_tokens':
+							usage.inputTokenDetails.cacheReadTokens,
 						'ai.output_tokens': usage.outputTokens,
-						'ai.reasoning_tokens': usage.reasoningTokens ?? 0,
+						'ai.reasoning_tokens':
+							usage.outputTokenDetails.reasoningTokens ?? 0,
+						'ai.total_tokens': usage.totalTokens,
+						'ai.cf_log_id': logId
+					})
+
+					log({
+						'ai.question': message,
+						'ai.response':
+							answer.type === 'text'
+								? answer.text
+								: JSON.stringify(answer),
+						'ai.references': references.length,
+						'ai.input_tokens': usage.inputTokens,
+						'ai.cached_input_tokens':
+							usage.inputTokenDetails.cacheReadTokens,
+						'ai.output_tokens': usage.outputTokens,
+						'ai.reasoning_tokens':
+							usage.outputTokenDetails.reasoningTokens ?? 0,
 						'ai.total_tokens': usage.totalTokens,
 						'ai.cf_log_id': logId
 					})

@@ -1,10 +1,11 @@
 import { createOpenAI } from '@ai-sdk/openai'
-import { createGroq } from '@ai-sdk/groq'
+// import { createGroq } from '@ai-sdk/groq'
+import { createCerebras } from '@ai-sdk/cerebras'
 
-import { initAxiomAI, wrapAISDKModel } from 'axiom/ai'
-import { getTracer } from '@elysiajs/opentelemetry'
+// import { initAxiomAI } from 'axiom/ai'
+// import { getTracer } from '@elysiajs/opentelemetry'
 
-initAxiomAI({ tracer: getTracer() })
+// initAxiomAI({ tracer: getTracer() })
 
 const cfAccountId = process.env.CF_ACCOUNT_ID
 const aiGatewayKey = process.env.AI_GATEWAY_KEY
@@ -26,21 +27,21 @@ export const openai = createOpenAI({
 	// }
 })
 
-export const groq = createGroq({
-	baseURL: `${baseURL}/groq`,
+// export const groq = createGroq({
+// 	baseURL: `${baseURL}/groq`,
+// 	headers: {
+// 		'cf-aig-authorization': `Bearer ${aiGatewayKey}`
+// 	}
+// })
+
+export const cerebras = createCerebras({
+	baseURL: `${baseURL}/cerebras`,
 	headers: {
 		'cf-aig-authorization': `Bearer ${aiGatewayKey}`
 	}
 })
 
-export const model = wrapAISDKModel(groq('openai/gpt-oss-120b'))
-
-// export const cerebras = createCerebras({
-// 	baseURL: `${baseURL}/cerebras`,
-// 	headers: {
-// 		'cf-aig-authorization': `Bearer ${aiGatewayKey}`
-// 	}
-// })
+export const model = cerebras('gpt-oss-120b')
 
 // export const model = cerebras('gpt-oss-120b')
 

@@ -83,7 +83,8 @@ export const structure = async () => {
 			markdown.includes('/docs/migrate/index.md') ||
 			markdown.includes('/cheat-sheet.md') ||
 			(markdown.includes('/blog') &&
-				!markdown.includes('/blog/openapi-type-gen'))
+				!markdown.includes('/blog/openapi-type-gen')) ||
+			markdown.includes('plugins/swagger')
 		)
 			continue
 
@@ -228,7 +229,7 @@ export const structure = async () => {
 			)
 
 			const { embeddings } = await embedMany({
-				model: openai.textEmbeddingModel('text-embedding-3-small'),
+				model: openai.embeddingModel('text-embedding-3-small'),
 				values: [
 					...chapters.map((c) => c.content),
 					...chapters.map((c) => {

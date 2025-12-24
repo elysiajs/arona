@@ -1,12 +1,12 @@
 import { record } from '@elysiajs/opentelemetry'
-import { wrapTool } from 'axiom/ai'
 
 import {
 	type ModelMessage,
 	stepCountIs,
 	streamText,
 	type StreamTextOnFinishCallback,
-	tool
+	tool,
+	zodSchema
 } from 'ai'
 import * as z from 'zod'
 
@@ -22,12 +22,11 @@ export const createSearchTool = (references: Reference[]) =>
 		description:
 			'Find relevant information from Elysia documentation. This tool is pure (deterministic), do not call them twice with the same parameters.',
 		inputSchema: z.object({
-			sentence: z
-				.string()
-				.describe('The keyword/sentence to search in the documentation')
-				.meta({
-					examples: ['handler', 'OpenAPI type gen', 'Eden Treaty']
-				})
+			sentence: z.string().meta({
+				description:
+					'The keyword/sentence to search in the documentation',
+				examples: ['handler', 'OpenAPI type gen', 'Eden Treaty']
+			})
 		}),
 		outputSchema: Models.references,
 		async execute({ sentence }) {
@@ -95,6 +94,7 @@ interface AskParams {
 	references: Reference[]
 	ip: string
 	onFinish?: StreamTextOnFinishCallback<{}>
+	think?: boolean
 }
 
 export async function ask({
@@ -104,7 +104,8 @@ export async function ask({
 	history,
 	references,
 	ip,
-	onFinish
+	onFinish,
+	think
 }: AskParams) {
 	const searchTool = createSearchTool(references)
 	const readPageTool = createPageTool(references)
@@ -148,12 +149,16 @@ export async function ask({
 								providerOptions: {
 									groq: {
 										reasoningFormat: 'hidden',
-										reasoningEffort: 'low',
+										reasoningEffort: think
+											? 'medium'
+											: 'low',
 										user: ip,
 										serviceTier: 'auto'
 									},
 									cerebras: {
-										reasoning_effort: 'low'
+										reasoning_effort: think
+											? 'medium'
+											: 'low'
 									}
 								},
 								onFinish(metadata) {
@@ -165,13 +170,13 @@ export async function ask({
 										`input tokens: ${metadata.usage.inputTokens}`
 									)
 									log(
-										`cached input tokens: ${metadata.usage.cachedInputTokens}`
+										`cached input tokens: ${metadata.usage.inputTokenDetails.cacheReadTokens}`
 									)
 									log(
 										`output tokens: ${metadata.usage.outputTokens}`
 									)
 									log(
-										`reasoning tokens: ${metadata.usage.reasoningTokens ?? 0}`
+										`reasoning tokens: ${metadata.usage.outputTokenDetails.reasoningTokens ?? 0}`
 									)
 									log(
 										`total tokens: ${metadata.usage.totalTokens}`

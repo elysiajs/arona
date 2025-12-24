@@ -34,7 +34,7 @@ export async function readPage(file: string): Promise<Reference | Reference[]> {
 			Reference[]
 		>`SELECT title, content, file, link FROM doc_chunks WHERE link = ${file.replace(/^docs\/|.md/g, '')} LIMIT = 1`.then(
 			(x) => Object.assign(x[0], { score: 1 })
-		)
+		);
 
 	if (!file.endsWith('.md')) file += '.md'
 
@@ -48,7 +48,7 @@ export async function readPage(file: string): Promise<Reference | Reference[]> {
 export async function search(value: string, abortSignal?: AbortSignal) {
 	const { embedding } = await retry(() =>
 		embed({
-			model: openai.textEmbeddingModel('text-embedding-3-small'),
+			model: openai.embeddingModel('text-embedding-3-small'),
 			value,
 			abortSignal
 		})

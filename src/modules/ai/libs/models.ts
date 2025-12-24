@@ -8,6 +8,7 @@ export namespace Models {
 		message: t.String({
 			maxLength: 4096
 		}),
+		think: t.Optional(t.Boolean()),
 		history: t.Optional(
 			t.Array(
 				t.Object({
@@ -31,8 +32,8 @@ export namespace Models {
 		score: z.number().describe('The relevance score of the page'),
 		link: z
 			.string()
-			.describe('The link of the page to read from Elysia documentation')
 			.meta({
+				description: 'The link of the page to read from Elysia documentation',
 				examples: [
 					'/essential/life-cycle',
 					'/essential/life-cycle#transform'
