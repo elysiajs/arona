@@ -9,7 +9,7 @@ import {
 } from 'ai'
 import * as z from 'zod'
 
-import { retry, redis, log, cache, model, instruction } from '@arona/libs'
+import { retry, redis, log, cache, model, instruction, thinkHardInstruction } from '@arona/libs'
 
 import { Models } from './models'
 import { compressHistory, normalizePage, search, readPage } from './utils'
@@ -129,13 +129,13 @@ export async function ask({
 									{
 										role: 'system',
 										content: references.length
-											? `${instruction}\nPage Data:\n${references
+											? `${think ? thinkHardInstruction ? instruction}\nPage Data:\n${references
 													.map(
 														(x) =>
 															`# ${x.title}\n${x.content}`
 													)
 													.join('\n')}`
-											: instruction
+											: think ? thinkHardInstruction : instruction
 									},
 									...compressHistory(history),
 									{
