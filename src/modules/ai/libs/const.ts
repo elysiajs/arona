@@ -2,7 +2,6 @@ export const SQL = Object.freeze({
 	findReference: `WITH q AS (SELECT $1::vector AS embedding)
 	SELECT
 	d.link,
-	d.file,
 	d.title,
 	d.content,
 	(
@@ -24,7 +23,6 @@ export const SQL = Object.freeze({
 
 export interface Reference {
 	link: string
-	file: string
 	title: string
 	content: string
 	score: number

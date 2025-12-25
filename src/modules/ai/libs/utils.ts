@@ -32,7 +32,7 @@ export async function readPage(file: string): Promise<Reference | Reference[]> {
 	if (file.includes('#'))
 		return sql<
 			Reference[]
-		>`SELECT title, content, file, link FROM doc_chunks WHERE link = ${file.replace(/^docs\/|.md/g, '')} LIMIT = 1`.then(
+		>`SELECT title, content, link FROM doc_chunks WHERE link = ${file.replace(/^docs\/|.md/g, '')} LIMIT = 1`.then(
 			(x) => Object.assign(x[0], { score: 1 })
 		);
 
@@ -40,7 +40,7 @@ export async function readPage(file: string): Promise<Reference | Reference[]> {
 
 	return sql<
 		Reference[]
-	>`SELECT title, content, file, link FROM doc_chunks WHERE file = ${file}`.then(
+	>`SELECT title, content, link FROM doc_chunks WHERE file = ${file}`.then(
 		(x) => x.map((r) => Object.assign(r, { score: 1 }))
 	)
 }
