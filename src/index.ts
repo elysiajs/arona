@@ -30,17 +30,17 @@ export const app = new Elysia({
 	)
 	.use(
 		opentelemetry({
-			spanProcessors: [
-				new BatchSpanProcessor(
-					new OTLPTraceExporter({
-						url: 'https://api.axiom.co/v1/traces',
-						headers: {
-							Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
-							'X-Axiom-Dataset': process.env.AXIOM_DATASET!
-						}
-					})
-				)
-			]
+			// spanProcessors: [
+			// 	new BatchSpanProcessor(
+			// 		new OTLPTraceExporter({
+			// 			url: 'https://api.axiom.co/v1/traces',
+			// 			headers: {
+			// 				Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
+			// 				'X-Axiom-Dataset': process.env.AXIOM_DATASET!
+			// 			}
+			// 		})
+			// 	)
+			// ]
 		})
 	)
 	.use(

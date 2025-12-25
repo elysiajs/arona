@@ -1,9 +1,5 @@
 import { Elysia, t } from 'elysia'
-import {
-	getCurrentSpan,
-	setAttributes,
-	startSpan
-} from '@elysiajs/opentelemetry'
+import { startSpan } from '@elysiajs/opentelemetry'
 
 import {
 	API_KEY,
@@ -92,6 +88,7 @@ export const ai = new Elysia()
 			}
 
 			let logId: string | undefined
+
 			const stream = await ask({
 				abortSignal: request.signal,
 				seed,
@@ -102,41 +99,29 @@ export const ai = new Elysia()
 				think,
 				onFinish({ usage, response, content }) {
 					logId = response.headers?.['cf-aig-log-id']
-					const answer = content[0]
 
-					setAttributes({
+					const attributes = {
+						'ai.cf_log_id': logId,
 						'ai.question': message,
-						'ai.response':
-							answer.type === 'text'
-								? answer.text
-								: JSON.stringify(answer),
-						'ai.references': references.length,
-						'ai.input_tokens': usage.inputTokens,
+						'ai.response': content.map((answer) =>
+							JSON.stringify(answer)
+						),
+						'ai.references': JSON.stringify(
+							references.map((x) => x.link)
+						),
+						'ai.input_tokens': usage.inputTokens ?? 0,
 						'ai.cached_input_tokens':
-							usage.inputTokenDetails.cacheReadTokens,
-						'ai.output_tokens': usage.outputTokens,
+							usage.inputTokenDetails.cacheReadTokens ?? 0,
+						'ai.output_tokens': usage.outputTokens ?? 0,
 						'ai.reasoning_tokens':
 							usage.outputTokenDetails.reasoningTokens ?? 0,
-						'ai.total_tokens': usage.totalTokens,
-						'ai.cf_log_id': logId
-					})
+						'ai.total_tokens': usage.totalTokens ?? 0
+					} as const
 
-					log({
-						'ai.question': message,
-						'ai.response':
-							answer.type === 'text'
-								? answer.text
-								: JSON.stringify(answer),
-						'ai.references': references.length,
-						'ai.input_tokens': usage.inputTokens,
-						'ai.cached_input_tokens':
-							usage.inputTokenDetails.cacheReadTokens,
-						'ai.output_tokens': usage.outputTokens,
-						'ai.reasoning_tokens':
-							usage.outputTokenDetails.reasoningTokens ?? 0,
-						'ai.total_tokens': usage.totalTokens,
-						'ai.cf_log_id': logId
-					})
+					const ai = startSpan('AI Log')
+					ai.setAttributes(attributes)
+					log(attributes)
+					ai.end()
 				}
 			}).catch((err) => new Error(err))
 

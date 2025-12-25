@@ -121,8 +121,8 @@ export async function ask({
 		() =>
 			record(
 				'Gather Resources',
-				() =>
-					new Promise<AsyncGenerator<string, any, any>>(
+				async (span) =>
+					await new Promise<AsyncGenerator<string, any, any>>(
 						async (resolve, reject) => {
 							const response = streamText({
 								model,
@@ -175,24 +175,6 @@ export async function ask({
 								},
 								onFinish(metadata) {
 									onFinish?.(metadata as any)
-
-									log(`question: ${message}`)
-									log(`sources: ${references.length}`)
-									log(
-										`input tokens: ${metadata.usage.inputTokens}`
-									)
-									log(
-										`cached input tokens: ${metadata.usage.inputTokenDetails.cacheReadTokens}`
-									)
-									log(
-										`output tokens: ${metadata.usage.outputTokens}`
-									)
-									log(
-										`reasoning tokens: ${metadata.usage.outputTokenDetails.reasoningTokens ?? 0}`
-									)
-									log(
-										`total tokens: ${metadata.usage.totalTokens}`
-									)
 								}
 							})
 
