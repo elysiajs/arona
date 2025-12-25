@@ -123,7 +123,7 @@ export async function ask({
 									readPage: readPageTool,
 									search: searchTool
 								},
-								stopWhen: stepCountIs(8),
+								stopWhen: stepCountIs(think ? 15 : 8),
 								seed,
 								messages: [
 									{
@@ -157,8 +157,8 @@ export async function ask({
 									cerebras: {
 										reasoning_effort: think
 											? 'high'
-											: 'low',
-										reasoningEffort: think ? 'high' : 'low'
+											: 'medium',
+										reasoningEffort: think ? 'high' : 'medium'
 									}
 								},
 								onFinish(metadata) {
