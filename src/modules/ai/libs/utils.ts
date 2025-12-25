@@ -21,6 +21,11 @@ export const compressHistory = (history: Models.ask['history']) =>
 		})
 		.slice(-8) ?? []
 
+/**
+ * Normalize link in case something went wrong (for legacy reasons)
+ * @param file
+ * @returns
+ */
 export function normalizePage(file: string) {
 	if (file.includes('://')) file = file.slice(file.indexOf('/') + 11)
 	if (file.startsWith('/')) file = file.slice(1)
@@ -32,7 +37,7 @@ export async function readPage(file: string): Promise<Reference | Reference[]> {
 	if (file.includes('#'))
 		return sql<
 			Reference[]
-		>`SELECT title, content, link FROM doc_chunks WHERE link = ${file.replace(/^docs\/|.md/g, '')} LIMIT = 1`.then(
+		>`SELECT title, content, link FROM doc_chunks WHERE link = ${sql(file.replace(/^docs\/|.md/g, ''))} LIMIT = 1`.then(
 			(x) => Object.assign(x[0], { score: 1 })
 		);
 
