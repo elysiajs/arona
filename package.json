@@ -15,7 +15,7 @@
 		"@elysiajs/cors": "^1.4.0",
 		"@elysiajs/cron": "^1.4.1",
 		"@elysiajs/openapi": "^1.4.12",
-		"@elysiajs/opentelemetry": "1.4.9",
+		"@elysiajs/opentelemetry": "^1.4.10",
 		"@opentelemetry/exporter-trace-otlp-proto": "^0.208.0",
 		"@opentelemetry/sdk-trace-node": "^2.2.0",
 		"@simplewebauthn/server": "^13.2.2",
