@@ -159,7 +159,7 @@ export const ai = new Elysia()
 				yield sources
 					.map(
 						(source) =>
-							`- [${source.title} - ${source.file.slice(5, -3)}](https://elysiajs.com/${source.link})`
+							`- [${source.title}](https://elysiajs.com/${source.link})`
 					)
 					.join('\n')
 
