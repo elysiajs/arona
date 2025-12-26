@@ -41,7 +41,7 @@ export const createSearchTool = (references: Reference[]) =>
 
 			let documents = await retry(
 				() => cache(`search:${sentence}`, () => search(sentence)),
-				5
+				3
 			)
 			if (!documents) return null
 
@@ -82,7 +82,7 @@ export const createPageTool = (references: Reference[]) =>
 
 			const documents = await retry(
 				() => cache(`page:${link}`, () => readPage(link)),
-				5
+				3
 			)
 			if (!documents) return null
 

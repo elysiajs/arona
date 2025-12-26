@@ -106,9 +106,7 @@ export const ai = new Elysia()
 						'ai.response': content.map((answer) =>
 							JSON.stringify(answer)
 						),
-						'ai.references': JSON.stringify(
-							references.map((x) => x.link)
-						),
+						'ai.references': references.map((x) => x.link),
 						'ai.input_tokens': usage.inputTokens ?? 0,
 						'ai.cached_input_tokens':
 							usage.inputTokenDetails.cacheReadTokens ?? 0,

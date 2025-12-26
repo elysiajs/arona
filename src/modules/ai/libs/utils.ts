@@ -40,7 +40,7 @@ export async function readPage(link: string): Promise<Reference | Reference[]> {
 		return sql<
 			Reference[]
 		>`SELECT title, content, link FROM doc_chunks WHERE link = ${link} LIMIT 1`.then(
-			(x) => Object.assign(x[0], { score: 1 })
+			(x) => (x[0] ? Object.assign(x[0], { score: 1 }) : [])
 		)
 
 	return sql<
