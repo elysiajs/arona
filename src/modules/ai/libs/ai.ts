@@ -9,7 +9,15 @@ import {
 } from 'ai'
 import * as z from 'zod'
 
-import { retry, redis, log, cache, model, instruction } from '@arona/libs'
+import {
+	retry,
+	redis,
+	log,
+	cache,
+	model,
+	instruction,
+	tableOfContents
+} from '@arona/libs'
 
 import { Models } from './models'
 import { compressHistory, normalizePage, search, readPage } from './utils'
@@ -85,6 +93,17 @@ export const createPageTool = (references: Reference[]) =>
 		}
 	})
 
+export const tableOfContentsTool = tool({
+	name: 'table_of_contents',
+	description:
+		'Gather information about Elysia by listing all available documents pair by title and link (excluding sub sections). Use "read_page" tool with link to read the page or find sub-sections using "search" tool.',
+	execute() {
+		console.log('TABLE OF CONTENTS')
+
+		return tableOfContents
+	}
+})
+
 interface AskParams {
 	abortSignal: AbortSignal
 	seed?: number
@@ -121,10 +140,18 @@ export async function ask({
 								abortSignal,
 								tools: {
 									readPage: readPageTool,
-									search: searchTool
+									search: searchTool,
+									table_of_contents: tableOfContentsTool
+								},
+								prepareStep({ stepNumber }) {
+									if (stepNumber === 0)
+										return {
+											activeTools: ['table_of_contents']
+										}
 								},
 								stopWhen: stepCountIs(think ? 12 : 8),
 								seed,
+								activeTools: ['readPage', 'search'],
 								messages: [
 									{
 										role: 'system',

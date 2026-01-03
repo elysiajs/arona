@@ -3,7 +3,7 @@ import { embed } from 'ai'
 import { openai, retry, sql } from '@arona/libs'
 
 import type { Models } from './models'
-import { Reference, SQL } from './const'
+import { SQL, type Reference } from './const'
 
 export const compressHistory = (history: Models.ask['history']) =>
 	history
@@ -61,7 +61,7 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 
 	return sql
 		.unsafe<Reference[]>(SQL.findReference, [`[${embedding.join(',')}]`])
-		.then((x) => x.filter((r) => r.score >= 0.42))
+		.then((x) => x.filter((r) => r.score >= 0.375))
 }
 
 export const deduplicateReferences = (references: Reference[]) => {

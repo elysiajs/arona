@@ -8,9 +8,9 @@ export const SQL = Object.freeze({
 	ABS(
 	 (
 	   (
-	     0.125 * (d.title_embedding <#> q.embedding) +
-	     0.6 * (d.embedding <#> q.embedding) +
-	     0.1 * (d.file_name_embedding <#> q.embedding) +
+	     0.1125 * (d.title_embedding <#> q.embedding) +
+	     0.625 * (d.embedding <#> q.embedding) +
+	     0.0875 * (d.file_name_embedding <#> q.embedding) +
 	     0.175 * d.weight * - 1
 	   )
 	 )
