@@ -25,7 +25,6 @@ import type { Reference } from './const'
 
 export const createSearchTool = (references: Reference[]) =>
 	tool({
-		name: 'search',
 		description:
 			'Find relevant information from Elysia documentation. This tool is pure (deterministic), do not call them twice with the same parameters.',
 		inputSchema: z.object({
@@ -61,7 +60,6 @@ export const createSearchTool = (references: Reference[]) =>
 
 export const createPageTool = (references: Reference[]) =>
 	tool({
-		name: 'read_page',
 		description:
 			'Read a specific page with in-depth detail. This tool is pure (deterministic), do not call them twice with the same parameters.',
 		inputSchema: z.object({
@@ -94,14 +92,11 @@ export const createPageTool = (references: Reference[]) =>
 	})
 
 export const tableOfContentsTool = tool({
-	name: 'table_of_contents',
 	description:
 		'Gather information about Elysia by listing all available documents pair by title and link (excluding sub sections). Use "read_page" tool with link to read the page or find sub-sections using "search" tool.',
-	execute() {
-		console.log('TABLE OF CONTENTS')
-
-		return tableOfContents
-	}
+	inputSchema: z.object({}),
+	outputSchema: z.string(),
+	execute: () => tableOfContents
 })
 
 interface AskParams {
