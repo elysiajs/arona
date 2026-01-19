@@ -183,9 +183,9 @@ export const structure = async () => {
 					}))
 			)
 		//remove duplicate link
-		// .filter(
-		// 	(x, i, a) => a.findIndex((y) => y.link === x.link) === i
-		// )
+		.filter(
+			(x, i, a) => a.findIndex((y) => y.link === x.link) === i
+		)
 
 		const newChapters = index(chunk).filter(
 			(x) =>
