@@ -23,7 +23,7 @@ export const SQL = Object.freeze({
 	  FROM ranked
 	  WHERE SCORE > 0.375
 	  ORDER BY score DESC, sequence ASC
-	  LIMIT 3
+	  LIMIT 2
 	)
 	SELECT
 	  tf.file,
