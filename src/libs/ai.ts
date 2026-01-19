@@ -41,8 +41,7 @@ export const groq = createGroq({
 // 	}
 // })
 
-export const model = cerebras('gpt-oss-120b')
-
+export const model = groq('gpt-oss-120b')
 // export const model = cerebras('gpt-oss-120b')
 
 export const tableOfContents = `
