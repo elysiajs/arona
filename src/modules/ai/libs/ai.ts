@@ -42,15 +42,8 @@ export const createSearchTool = (references: Reference[]) =>
 				() => cache(`search:${sentence}`, () => search(sentence)),
 				3
 			)
-			if (!documents) return null
 
-			// Intentionally no await
-			redis.set(
-				`search:${sentence}`,
-				JSON.stringify(documents),
-				'EX',
-				3600
-			)
+			if (!documents) return null
 
 			references.push(...documents)
 
@@ -93,7 +86,7 @@ export const createPageTool = (references: Reference[]) =>
 
 export const tableOfContentsTool = tool({
 	description:
-		'Gather information about Elysia by listing all available documents pair by title and link (excluding sub sections). Use "read_page" tool with link to read the page or find sub-sections using "search" tool.',
+		'Gather information about Elysia by listing all available documents pair by title and link. Use link with "read_page" tool to read the page.',
 	inputSchema: z.object({}),
 	outputSchema: z.string(),
 	execute: () => tableOfContents
@@ -138,12 +131,12 @@ export async function ask({
 									search: searchTool,
 									table_of_contents: tableOfContentsTool
 								},
-								prepareStep({ stepNumber }) {
-									if (stepNumber === 0)
-										return {
-											activeTools: ['table_of_contents']
-										}
-								},
+								// prepareStep({ stepNumber }) {
+								// 	if (stepNumber === 0)
+								// 		return {
+								// 			activeTools: ['table_of_contents']
+								// 		}
+								// },
 								stopWhen: stepCountIs(think ? 12 : 8),
 								seed,
 								activeTools: ['readPage', 'search'],

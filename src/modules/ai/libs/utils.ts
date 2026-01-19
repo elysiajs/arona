@@ -65,6 +65,9 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 			// @ts-ignore
 			r.link = r.file.slice(5, -3)
 
+			// @ts-ignore
+			delete r.file
+
 			return r
 		}))
 }

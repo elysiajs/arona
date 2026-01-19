@@ -30,15 +30,11 @@ export namespace Models {
 		title: z.string().describe('The title of the page'),
 		content: z.string().describe('The content excerpt of the page'),
 		score: z.number().describe('The relevance score of the page'),
-		link: z
-			.string()
-			.meta({
-				description: 'The link of the page to read from Elysia documentation',
-				examples: [
-					'/essential/life-cycle',
-					'/essential/life-cycle#transform'
-				]
-			})
+		link: z.string().meta({
+			description:
+				'The link of the page to read from Elysia documentation',
+			examples: ['essential/life-cycle']
+		})
 	})
 
 	export type Reference = z.infer<typeof reference>
