@@ -42,7 +42,8 @@ export const structure = async () => {
 		weight FLOAT NOT NULL DEFAULT 0.5,
 	  	embedding VECTOR(1536) NOT NULL,
 		title_embedding VECTOR(1536) NOT NULL,
-		file_name_embedding VECTOR(1536) NOT NULL
+		file_name_embedding VECTOR(1536) NOT NULL,
+		sequence smallint
 	);`
 	await sql`CREATE INDEX doc_chunks_file_idx ON doc_chunks (file);`.catch(
 		() => {}
@@ -72,6 +73,8 @@ export const structure = async () => {
 		title: string
 		content: string
 	}
+
+	const fileToSequence: Record<string, number> = {}
 
 	const markdownsGlob = new Bun.Glob('docs/**/*.md')
 	const ops = <Promise<Chunk>[]>[]
@@ -161,27 +164,28 @@ export const structure = async () => {
 			!title.startsWith('<') && !title.endsWith('>')
 
 		const index = (z: Chunk[]) =>
-			z
-				.flatMap((x) =>
-					x.content
-						.split('\n## ')
-						.map(format)
-						.filter((x) => notTag(x.title))
-						.map((c) => ({
-							...x,
-							...c,
-							content: c.content.trimStart().startsWith('#')
-								? c.content
-										.slice(c.content.indexOf('\n'))
-										.trim()
-								: c.content.trim(),
-							link: headerToLink(x.file, c.title)
-						}))
-				)
-				//remove duplicate link
-				.filter(
-					(x, i, a) => a.findIndex((y) => y.link === x.link) === i
-				)
+			z.flatMap((x) =>
+				x.content
+					.split('\n## ')
+					.map(format)
+					.filter((x) => notTag(x.title))
+					.map((c) => ({
+						...x,
+						...c,
+						content: c.content.trimStart().startsWith('#')
+							? c.content.slice(c.content.indexOf('\n')).trim()
+							: c.content.trim(),
+						link: headerToLink(x.file, c.title),
+						sequence:
+							x.file in fileToSequence
+								? fileToSequence[x.file]++
+								: (fileToSequence[x.file] = 0)
+					}))
+			)
+		//remove duplicate link
+		// .filter(
+		// 	(x, i, a) => a.findIndex((y) => y.link === x.link) === i
+		// )
 
 		const newChapters = index(chunk).filter(
 			(x) =>
@@ -191,8 +195,10 @@ export const structure = async () => {
 		)
 
 		const currentChapters = index(currentFiles)
-		for (let i = 0; i < currentFiles.length; i++)
-			currentChapters[i].link = currentFiles[i].link
+		// for (let i = 0; i < currentFiles.length; i++)
+		// 	currentChapters[i].link = currentFiles[i].link
+
+		console.log(fileToSequence)
 
 		const chapters: typeof newChapters = []
 		const toRemove: typeof currentChapters = []
@@ -264,7 +270,7 @@ export const structure = async () => {
 					const titleEmbed = embeddings[i + groups]
 					const fileEmbed = embeddings[i + groups * 2]
 
-					const { title, link, content, file } = chapters[i]
+					const { title, link, content, file, sequence } = chapters[i]
 					const subTitle = file.split('/')[1] || 'unknown'
 
 					let weight: number =
@@ -274,9 +280,7 @@ export const structure = async () => {
 					if (subTitle === 'patterns' && file.includes('websocket'))
 						weight = 0.1
 
-					sqlValues += makeSqlValues(i, 8)
-
-					values.push(
+					const value = [
 						link,
 						file,
 						title,
@@ -284,13 +288,17 @@ export const structure = async () => {
 						weight,
 						`[${embed.join(',')}]`,
 						`[${titleEmbed.join(',')}]`,
-						`[${fileEmbed.join(',')}]`
-					)
+						`[${fileEmbed.join(',')}]`,
+						sequence
+					]
+
+					sqlValues += makeSqlValues(i, value.length)
+					values.push(...value)
 				}
 
 				if (!values.length) return
 
-				const query = `INSERT INTO doc_chunks (link, file, title, content, weight, embedding, title_embedding, file_name_embedding)
+				const query = `INSERT INTO doc_chunks (link, file, title, content, weight, embedding, title_embedding, file_name_embedding, sequence)
 					VALUES ${sqlValues}
 					ON CONFLICT (link)
 					DO UPDATE SET
@@ -298,10 +306,17 @@ export const structure = async () => {
 					   	embedding = EXCLUDED.embedding,
 						weight = EXCLUDED.weight,
 						title_embedding = EXCLUDED.title_embedding,
-						file_name_embedding = EXCLUDED.file_name_embedding
+						file_name_embedding = EXCLUDED.file_name_embedding,
+						sequence = EXCLUDED.sequence
 						;`
 
-				await sql.unsafe(query, values)
+				await sql
+					.unsafe(query, values)
+					.catch((title) =>
+						console.warn(
+							`Duplicated link ${chapters.map((a) => a.link).join(',')}`
+						)
+					)
 			} else {
 				console.error(
 					'Failed to create embeddings for batch',

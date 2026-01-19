@@ -61,7 +61,12 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 
 	return sql
 		.unsafe<Reference[]>(SQL.findReference, [`[${embedding.join(',')}]`])
-		.then((x) => x.filter((r) => r.score >= 0.375))
+		.then((x) => x.filter((r) => {
+			// @ts-ignore
+			r.link = r.file.slice(5, -3)
+
+			return r
+		}))
 }
 
 export const deduplicateReferences = (references: Reference[]) => {

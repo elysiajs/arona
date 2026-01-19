@@ -1,6 +1,6 @@
 import { createOpenAI } from '@ai-sdk/openai'
-// import { createGroq } from '@ai-sdk/groq'
-import { createCerebras } from '@ai-sdk/cerebras'
+import { createGroq } from '@ai-sdk/groq'
+// import { createCerebras } from '@ai-sdk/cerebras'
 
 // import { initAxiomAI } from 'axiom/ai'
 // import { getTracer } from '@elysiajs/opentelemetry'
@@ -27,19 +27,19 @@ export const openai = createOpenAI({
 	// }
 })
 
-// export const groq = createGroq({
-// 	baseURL: `${baseURL}/groq`,
-// 	headers: {
-// 		'cf-aig-authorization': `Bearer ${aiGatewayKey}`
-// 	}
-// })
-
-export const cerebras = createCerebras({
-	baseURL: `${baseURL}/cerebras`,
+export const groq = createGroq({
+	baseURL: `${baseURL}/groq`,
 	headers: {
 		'cf-aig-authorization': `Bearer ${aiGatewayKey}`
 	}
 })
+
+// export const cerebras = createCerebras({
+// 	baseURL: `${baseURL}/cerebras`,
+// 	headers: {
+// 		'cf-aig-authorization': `Bearer ${aiGatewayKey}`
+// 	}
+// })
 
 export const model = cerebras('gpt-oss-120b')
 
@@ -183,10 +183,9 @@ Behavior:
 - Summarize at the end if the response is long.
 
 Constraints:
-- Truth is paramount and integrity is second to none.
-- Always verify factual information with references, this is life or death situation.
+- Reference is paramount and integrity is second to none.
 - Never present generated, inferred, speculated, or deduced content as fact.
-- Every part of the response must cited and verifiable.
+- Do not make up something you can't cite or verify, this is life or death situation.
 - If you can't verifiy the information, label it as speculation.
 - Prefers Bun runtime unless specified otherwise.
 - If the question is unrelated to Elysia, politely decline to answer or have some small talk.
