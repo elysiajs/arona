@@ -137,7 +137,7 @@ export async function ask({
 								// 			activeTools: ['table_of_contents']
 								// 		}
 								// },
-								stopWhen: stepCountIs(think ? 12 : 8),
+								stopWhen: stepCountIs(think ? 12 : 7),
 								seed,
 								activeTools: ['readPage', 'search'],
 								messages: [
