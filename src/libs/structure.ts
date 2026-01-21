@@ -164,28 +164,31 @@ export const structure = async () => {
 			!title.startsWith('<') && !title.endsWith('>')
 
 		const index = (z: Chunk[]) =>
-			z.flatMap((x) =>
-				x.content
-					.split('\n## ')
-					.map(format)
-					.filter((x) => notTag(x.title))
-					.map((c) => ({
-						...x,
-						...c,
-						content: c.content.trimStart().startsWith('#')
-							? c.content.slice(c.content.indexOf('\n')).trim()
-							: c.content.trim(),
-						link: headerToLink(x.file, c.title),
-						sequence:
-							x.file in fileToSequence
-								? fileToSequence[x.file]++
-								: (fileToSequence[x.file] = 0)
-					}))
-			)
-		//remove duplicate link
-		.filter(
-			(x, i, a) => a.findIndex((y) => y.link === x.link) === i
-		)
+			z
+				.flatMap((x) =>
+					x.content
+						.split('\n## ')
+						.map(format)
+						.filter((x) => notTag(x.title))
+						.map((c) => ({
+							...x,
+							...c,
+							content: c.content.trimStart().startsWith('#')
+								? c.content
+										.slice(c.content.indexOf('\n'))
+										.trim()
+								: c.content.trim(),
+							link: headerToLink(x.file, c.title),
+							sequence:
+								x.file in fileToSequence
+									? ++fileToSequence[x.file]
+									: (fileToSequence[x.file] = 0)
+						}))
+				)
+				//remove duplicate link
+				.filter(
+					(x, i, a) => a.findIndex((y) => y.link === x.link) === i
+				)
 
 		const newChapters = index(chunk).filter(
 			(x) =>

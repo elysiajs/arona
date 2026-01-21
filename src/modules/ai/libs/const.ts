@@ -5,8 +5,10 @@ export const SQL = Object.freeze({
 	ranked AS (
 	  SELECT DISTINCT ON (d.file)
 	    d.file,
+		d.link,
 	    d.title,
 		d.sequence,
+		d.content,
 	    (
 	      ABS(
 	        0.1125 * (d.title_embedding <#> q.embedding) +
@@ -18,22 +20,35 @@ export const SQL = Object.freeze({
 	  FROM doc_chunks d, q
 	  ORDER BY d.file, score DESC
 	),
-	top_file AS (
+	filtered AS (
 	  SELECT *
 	  FROM ranked
-	  WHERE SCORE > 0.375
-	  ORDER BY score DESC, sequence ASC
-	  LIMIT 2
+	  WHERE score > 0.375
+	  ORDER BY score DESC
+	  LIMIT 5
+	),
+	chunk AS (
+	  SELECT
+		f.file,
+		f.link,
+		f.title,
+		dc.content,
+		dc.sequence,
+		f.score as score
+	  FROM filtered f
+	  JOIN doc_chunks dc
+		ON dc.file = f.file
+		AND dc.sequence BETWEEN f.sequence - 1 AND f.sequence + 1
+	  ORDER BY score, sequence
 	)
 	SELECT
-	  tf.file,
-	  tf.title,
-	  string_agg(dc.content, E'\n') AS content,
-	  tf.score
-	FROM top_file tf
-	JOIN doc_chunks dc USING (file)
-	GROUP BY tf.file, tf.title, tf.score
-	ORDER BY tf.score DESC;`
+	  c.link,
+	  c.title,
+	  string_agg(c.content, E'\n') AS content,
+	  c.score
+	FROM chunk c
+	GROUP BY c.file, c.title, c.score, c.link
+	ORDER BY c.score DESC;`
 } as const)
 
 export interface Reference {

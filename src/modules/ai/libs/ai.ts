@@ -26,7 +26,7 @@ import type { Reference } from './const'
 export const createSearchTool = (references: Reference[]) =>
 	tool({
 		description:
-			'Find relevant information from Elysia documentation. This tool is pure (deterministic), do not call them twice with the same parameters.',
+			'Find relevant information from Elysia documentation. This tool is pure (deterministic), do not call them twice with the same parameters. As result is sub sction, you may need to use "read_page" tool to get more indepth detail.',
 		inputSchema: z.object({
 			sentence: z.string().meta({
 				description:
