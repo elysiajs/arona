@@ -7,7 +7,7 @@ import { ip } from './ip'
 
 const CONFIG = {
 	POW_DIFFICULTY: 19,
-	CHALLENGE_EXPIRY_MS: 15 * 60_000,
+	CHALLENGE_EXPIRY_MS: 15 * 60_000
 } as const
 
 const secret = process.env.CHALLENGE_SECRET
@@ -41,9 +41,14 @@ export const pow = new Elysia({
 	.use(ip)
 	.model({
 		...models,
-		challengeRecordCookie: t.Object({
-			challenge: models.challengeRecord
-		})
+		challengeRecordCookie: t.Cookie(
+			{
+				challenge: models.challengeRecord
+			},
+			{
+				secrets: secret
+			}
+		)
 	})
 	.prefix('model', 'pow.')
 	.get(
