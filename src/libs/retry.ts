@@ -16,7 +16,7 @@ export const retry = <T>(
 				if (n > 0)
 					setTimeout(
 						() => attempt(n - 1),
-						typeof delay === 'function' ? delay(n - 1) : number
+						typeof delay === 'function' ? delay(n - 1) : n
 					)
 				else reject(err)
 			}

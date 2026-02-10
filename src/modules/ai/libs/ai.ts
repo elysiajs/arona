@@ -11,7 +11,6 @@ import * as z from 'zod'
 
 import {
 	retry,
-	redis,
 	log,
 	cache,
 	model,
@@ -116,6 +115,14 @@ export async function ask({
 	const searchTool = createSearchTool(references)
 	const readPageTool = createPageTool(references)
 
+	console.log(
+		references.length
+			? `${instruction}\nPage Data:\n${references
+					.map((x) => `# ${x.title}\n${x.summary || x.content}`)
+					.join('\n')}`
+			: instruction
+	)
+
 	const stream = await retry(
 		() =>
 			record(
@@ -144,10 +151,11 @@ export async function ask({
 									{
 										role: 'system',
 										content: references.length
-											? `${instruction}\nPage Data:\n${references
+											? `${instruction}\n---\n# Page: ${references[0].title}\n${references
 													.map(
 														(x) =>
-															`# ${x.title}\n${x.summary || x.content}`
+															// summarized page are extremely hard to summarize again
+															`## ${x.title}\n${x.content}`
 													)
 													.join('\n')}`
 											: instruction

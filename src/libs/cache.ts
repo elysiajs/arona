@@ -8,16 +8,22 @@ export const cache = async <T extends (...args: any) => any>(
 	fn: T
 ): Promise<Awaited<ReturnType<T>>> =>
 	record(name, async () => {
-		const cache = await redis.get(name)
+		try {
+			const cache = await redis.get(`${name}_2`)
 
-		if (cache) {
-			log(`Cache hit for '${name}'`)
+			if (cache) {
+				log(`Cache hit for '${name}'`)
 
-			return JSON.parse(cache)
+				return JSON.parse(cache)
+			}
+
+			const result = await fn()
+			redis.set(name, JSON.stringify(result), 'EX', 3600)
+
+			return result
+		} catch (error) {
+			console.log(error)
+
+			return fn()
 		}
-
-		const result = await fn()
-		redis.set(name, JSON.stringify(result), 'EX', 3600)
-
-		return result
 	})
