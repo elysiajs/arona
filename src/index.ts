@@ -54,7 +54,7 @@ export const app = new Elysia({
 	.use(ai)
 
 if (!isDev && cluster.isPrimary) {
-	const parallel = availableParallelism() / 2
+	const parallel = availableParallelism() - 1
 	for (let i = 0; i < parallel; i++) cluster.fork()
 
 	cluster.on('exit', (worker) => {

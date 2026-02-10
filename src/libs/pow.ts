@@ -74,25 +74,29 @@ export const pow = new Elysia({
 		}
 	)
 	.macro('pow', {
-		ip: true,
 		body: 'pow.ChallengeVerifyBody',
 		cookie: t.Cookie({
 			challenge: models.challengeRecord
 		}),
 		resolve: function pow({
 			status,
-			ip,
 			body: {
 				pow: { suffix }
 			},
-			cookie: { challenge }
+			cookie: { challenge },
+			headers,
+			server,
+			request
 		}) {
-			console.log(challenge.value.ip, ip)
-			// if (challenge.value.ip !== ip) {
-			// 	challenge.remove()
+			const ip =
+				headers['cf-connecting-ip'] ||
+				(server?.requestIP(request)?.address as string)
 
-			// 	return status(403, 'IP address mismatch')
-			// }
+			if (challenge.value.ip !== ip) {
+				challenge.remove()
+
+				return status(403, 'IP address mismatch')
+			}
 
 			if (
 				challenge.value.issued + CONFIG.CHALLENGE_EXPIRY_MS <

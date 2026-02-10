@@ -115,14 +115,6 @@ export async function ask({
 	const searchTool = createSearchTool(references)
 	const readPageTool = createPageTool(references)
 
-	console.log(
-		references.length
-			? `${instruction}\nPage Data:\n${references
-					.map((x) => `# ${x.title}\n${x.summary || x.content}`)
-					.join('\n')}`
-			: instruction
-	)
-
 	const stream = await retry(
 		() =>
 			record(
