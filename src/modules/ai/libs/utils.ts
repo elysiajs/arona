@@ -39,13 +39,13 @@ export async function readPage(link: string): Promise<Reference | Reference[]> {
 	if (link.includes('#'))
 		return sql<
 			Reference[]
-		>`SELECT title, content, link FROM doc_chunks WHERE link = ${link} LIMIT 1`.then(
+		>`SELECT title, content, summary, link FROM doc_chunks WHERE link = ${link} LIMIT 1`.then(
 			(x) => (x[0] ? Object.assign(x[0], { score: 1 }) : [])
 		)
 
 	return sql<
 		Reference[]
-	>`SELECT title, content, link FROM doc_chunks WHERE link LIKE ${link + '%'}`.then(
+	>`SELECT title, content, summary, link FROM doc_chunks WHERE link LIKE ${link + '%'}`.then(
 		(x) => x.map((r) => Object.assign(r, { score: 1 }))
 	)
 }

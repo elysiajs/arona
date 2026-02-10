@@ -1,10 +1,10 @@
 import { SQL } from 'bun'
 import { rmdir, stat } from 'fs/promises'
 
-import { embedMany } from 'ai'
+import { embedMany, generateText } from 'ai'
 import Queue from 'p-queue'
 
-import { openai, sql, log } from '@arona/libs'
+import { openai, retry, sql, log, model } from '@arona/libs'
 
 const url = process.env.DATABASE_URL
 if (!url) throw new Error('DATABASE_URL is not set')
@@ -39,6 +39,7 @@ export const structure = async () => {
 		) STORED,
 	    title VARCHAR(255) NOT NULL,
 	  	content TEXT NOT NULL,
+	  	summary TEXT NOT NULL,
 		weight FLOAT NOT NULL DEFAULT 0.5,
 	  	embedding VECTOR(1536) NOT NULL,
 		title_embedding VECTOR(1536) NOT NULL,
@@ -198,10 +199,9 @@ export const structure = async () => {
 		)
 
 		const currentChapters = index(currentFiles)
-		// for (let i = 0; i < currentFiles.length; i++)
-		// 	currentChapters[i].link = currentFiles[i].link
 
-		console.log(fileToSequence)
+		for (let i = 0; i < currentFiles.length; i++)
+			currentChapters[i].link = currentFiles[i].link
 
 		const chapters: typeof newChapters = []
 		const toRemove: typeof currentChapters = []
@@ -214,7 +214,7 @@ export const structure = async () => {
 			if (existIndex === -1) {
 				chapters.push(newChapter)
 			} else if (
-				// set to true to reindex all
+				// ? set to true to reindex all
 				// true
 				currentChapters[existIndex].content !== newChapter.content
 			)
@@ -283,6 +283,35 @@ export const structure = async () => {
 					if (subTitle === 'patterns' && file.includes('websocket'))
 						weight = 0.1
 
+					const summary = await retry(
+						() =>
+							generateText({
+								model,
+								prompt: `Would you kindly summarize this into a SKILLS.md section so you can read later. Be conside, use no emoji.\n\n${content}`
+							})
+								.then((x) => {
+									if (!x.text) throw new Error()
+
+									let summary = x.text
+										.slice(x.text.indexOf('\n', 3))
+										.trimStart()
+
+									if (summary.startsWith('---'))
+										summary = summary
+											.slice(summary.indexOf('\n', 2))
+											.trimStart()
+
+									return summary
+								})
+								.catch((error) => {
+									console.warn(error)
+
+									throw error
+								}),
+						5,
+						(n) => Math.pow(n, 2) * 1000 + 1000
+					)
+
 					const value = [
 						link,
 						file,
@@ -292,7 +321,8 @@ export const structure = async () => {
 						`[${embed.join(',')}]`,
 						`[${titleEmbed.join(',')}]`,
 						`[${fileEmbed.join(',')}]`,
-						sequence
+						sequence,
+						summary
 					]
 
 					sqlValues += makeSqlValues(i, value.length)
@@ -301,7 +331,7 @@ export const structure = async () => {
 
 				if (!values.length) return
 
-				const query = `INSERT INTO doc_chunks (link, file, title, content, weight, embedding, title_embedding, file_name_embedding, sequence)
+				const query = `INSERT INTO doc_chunks (link, file, title, content, weight, embedding, title_embedding, file_name_embedding, sequence, summary)
 					VALUES ${sqlValues}
 					ON CONFLICT (link)
 					DO UPDATE SET
@@ -310,7 +340,8 @@ export const structure = async () => {
 						weight = EXCLUDED.weight,
 						title_embedding = EXCLUDED.title_embedding,
 						file_name_embedding = EXCLUDED.file_name_embedding,
-						sequence = EXCLUDED.sequence
+						sequence = EXCLUDED.sequence,
+						summary = EXCLUDED.summary
 						;`
 
 				await sql
@@ -345,6 +376,8 @@ export const structure = async () => {
 	}
 
 	let totalOps = 0
+	const queueOps = <Promise<void>[]>[]
+
 	for (const { file, title, content } of markdowns) {
 		if (size + content.length < 8000) {
 			_chunk.push({ file, title, content })
@@ -352,7 +385,7 @@ export const structure = async () => {
 			continue
 		}
 
-		queue.add(createEmbedding(totalOps, [..._chunk]))
+		queueOps.push(queue.add(createEmbedding(totalOps, [..._chunk])))
 		totalOps++
 		_chunk.length = 0
 		size = 0
@@ -361,9 +394,11 @@ export const structure = async () => {
 		size += content.length
 	}
 
-	queue.add(createEmbedding(totalOps, [..._chunk]))
+	queueOps.push(queue.add(createEmbedding(totalOps, [..._chunk])))
 	_chunk.length = 0
 	size = 0
+
+	await Promise.all(queueOps)
 
 	log('Total', queue.size, 'batches to process')
 

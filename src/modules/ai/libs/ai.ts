@@ -147,7 +147,7 @@ export async function ask({
 											? `${instruction}\nPage Data:\n${references
 													.map(
 														(x) =>
-															`# ${x.title}\n${x.content}`
+															`# ${x.title}\n${x.summary || x.content}`
 													)
 													.join('\n')}`
 											: instruction
@@ -208,7 +208,7 @@ export const createMessages = (
 			role: 'system',
 			content: references.length
 				? `${instruction}\nPage Data:\n${references
-						.map((x) => `# ${x.title}\n${x.content}`)
+						.map((x) => `# ${x.title}\n${x.summary || x.content}`)
 						.join('\n')}`
 				: instruction
 		},

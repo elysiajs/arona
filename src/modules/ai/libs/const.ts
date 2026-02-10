@@ -9,6 +9,7 @@ export const SQL = Object.freeze({
 	    d.title,
 		d.sequence,
 		d.content,
+		d.summary,
 	    (
 	      ABS(
 	        0.1125 * (d.title_embedding <#> q.embedding) +
@@ -33,6 +34,7 @@ export const SQL = Object.freeze({
 		f.link,
 		f.title,
 		dc.content,
+		dc.summary,
 		dc.sequence,
 		f.score as score
 	  FROM filtered f
@@ -45,6 +47,7 @@ export const SQL = Object.freeze({
 	  c.link,
 	  c.title,
 	  string_agg(c.content, E'\n') AS content,
+	  string_agg(c.summary, E'\n') AS summary,
 	  c.score
 	FROM chunk c
 	GROUP BY c.file, c.title, c.score, c.link
@@ -55,5 +58,6 @@ export interface Reference {
 	link: string
 	title: string
 	content: string
+	summary: string
 	score: number
 }
