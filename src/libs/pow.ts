@@ -68,29 +68,17 @@ export const pow = new Elysia({
 		},
 		{
 			ip: true,
-			cookie: t.Cookie(
-				{
-					challenge: t.Optional(models.challengeRecord)
-				},
-				{
-					secrets: secret,
-					sign: ['challenge']
-				}
-			)
+			cookie: t.Cookie({
+				challenge: t.Optional(models.challengeRecord)
+			})
 		}
 	)
 	.macro('pow', {
 		ip: true,
 		body: 'pow.ChallengeVerifyBody',
-		cookie: t.Cookie(
-			{
-				challenge: models.challengeRecord
-			},
-			{
-				secrets: secret,
-				sign: ['challenge']
-			}
-		),
+		cookie: t.Cookie({
+			challenge: models.challengeRecord
+		}),
 		resolve: function pow({
 			status,
 			ip,
@@ -99,14 +87,20 @@ export const pow = new Elysia({
 			},
 			cookie: { challenge }
 		}) {
-			if (challenge.value.ip !== ip)
-				return status(403, 'IP address mismatch')
+			// if (challenge.value.ip !== ip) {
+			// 	challenge.remove()
+
+			// 	return status(403, 'IP address mismatch')
+			// }
 
 			if (
 				challenge.value.issued + CONFIG.CHALLENGE_EXPIRY_MS <
 				Date.now()
-			)
+			) {
+				challenge.remove()
+
 				return status(403, 'Challenge expired')
+			}
 
 			const credentialId = `${challenge.value.nonce}:${suffix}`
 			const hash = crypto
