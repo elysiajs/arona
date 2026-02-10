@@ -68,16 +68,14 @@ export const pow = new Elysia({
 		},
 		{
 			ip: true,
-			cookie: t.Optional(
-				t.Cookie(
-					{
-						challenge: models.challengeRecord
-					},
-					{
-						secrets: secret,
-						sign: ['challenge']
-					}
-				)
+			cookie: t.Cookie(
+				{
+					challenge: t.Optional(models.challengeRecord)
+				},
+				{
+					secrets: secret,
+					sign: ['challenge']
+				}
 			)
 		}
 	)
