@@ -39,17 +39,7 @@ export const pow = new Elysia({
 	name: 'libs/pow'
 })
 	.use(ip)
-	.model({
-		...models,
-		challengeRecordCookie: t.Cookie(
-			{
-				challenge: models.challengeRecord
-			},
-			{
-				secrets: secret
-			}
-		)
-	})
+	.model(models)
 	.prefix('model', 'pow.')
 	.get(
 		'/request',
@@ -61,6 +51,7 @@ export const pow = new Elysia({
 
 			challenge.set({
 				maxAge: CONFIG.CHALLENGE_EXPIRY_MS / 1000,
+				secrets: secret,
 				value: {
 					nonce,
 					ip,
@@ -76,13 +67,32 @@ export const pow = new Elysia({
 			} as const
 		},
 		{
-			ip: true
+			ip: true,
+			cookie: t.Optional(
+				t.Cookie(
+					{
+						challenge: models.challengeRecord
+					},
+					{
+						secrets: secret,
+						sign: ['challenge']
+					}
+				)
+			)
 		}
 	)
 	.macro('pow', {
 		ip: true,
 		body: 'pow.ChallengeVerifyBody',
-		cookie: 'pow.ChallengeRecordCookie',
+		cookie: t.Cookie(
+			{
+				challenge: models.challengeRecord
+			},
+			{
+				secrets: secret,
+				sign: ['challenge']
+			}
+		),
 		resolve: function pow({
 			status,
 			ip,

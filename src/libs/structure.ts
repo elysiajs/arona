@@ -296,6 +296,17 @@ export const structure = async () => {
 										.slice(x.text.indexOf('\n', 3))
 										.trimStart()
 
+									if (summary.startsWith('```')) {
+										summary = summary
+											.slice(summary.indexOf('\n', 2))
+											.trimStart()
+
+										if (summary.endsWith('```'))
+											summary = summary
+												.slice(0, -3)
+												.trimEnd()
+									}
+
 									if (summary.startsWith('---'))
 										summary = summary
 											.slice(summary.indexOf('\n', 2))
