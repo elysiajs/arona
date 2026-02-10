@@ -92,11 +92,13 @@ export const pow = new Elysia({
 				headers['cf-connecting-ip'] ||
 				(server?.requestIP(request)?.address as string)
 
-			if (challenge.value.ip !== ip) {
-				challenge.remove()
+			console.log('IPP', ip, challenge.value.ip)
 
-				return status(403, 'IP address mismatch')
-			}
+			// if (challenge.value.ip !== ip) {
+			// 	challenge.remove()
+
+			// 	return status(403, 'IP address mismatch')
+			// }
 
 			if (
 				challenge.value.issued + CONFIG.CHALLENGE_EXPIRY_MS <
