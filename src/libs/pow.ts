@@ -93,7 +93,7 @@ export const pow = new Elysia({
 				(server?.requestIP(request)?.address as string)
 
 			console.log('IPP', ip, challenge.value.ip)
-			console.log("CHAN VAL", challenge.value)
+			console.log("CHAN VAL", challenge.value, typeof challenge.value, challenge.value.nonce, challenge.value.ip)
 
 			// if (challenge.value.ip !== ip) {
 			// 	challenge.remove()
