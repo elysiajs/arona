@@ -87,6 +87,7 @@ export const pow = new Elysia({
 			},
 			cookie: { challenge }
 		}) {
+			console.log(challenge.value.ip, ip)
 			// if (challenge.value.ip !== ip) {
 			// 	challenge.remove()
 
