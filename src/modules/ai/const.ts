@@ -1,4 +1,4 @@
-export const SQL = Object.freeze({
+export const SQL = {
 	findReference: `WITH q AS (
 	  SELECT $1::vector AS embedding
 	),
@@ -52,12 +52,4 @@ export const SQL = Object.freeze({
 	FROM chunk c
 	GROUP BY c.file, c.title, c.score, c.link
 	ORDER BY c.score DESC;`
-} as const)
-
-export interface Reference {
-	link: string
-	title: string
-	content: string
-	summary: string
-	score: number
-}
+} as const

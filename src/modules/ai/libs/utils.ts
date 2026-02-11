@@ -1,11 +1,10 @@
-import { embed } from 'ai'
+import type { ModelMessage } from 'ai'
 
-import { openai, retry, sql } from '@arona/libs'
+import { instruction, sql } from '@arona/libs'
 
-import type { Models } from './models'
-import { SQL, type Reference } from './const'
+import type { History, Reference } from '../model'
 
-export const compressHistory = (history: Models.ask['history']) =>
+export const compressHistory = (history: History) =>
 	history
 		?.map((x) => {
 			if (x.content.length < 2048) return x
@@ -33,37 +32,6 @@ export function normalizePage(file: string) {
 	return file
 }
 
-export async function readPage(link: string): Promise<Reference | Reference[]> {
-	link = link.replace(/^docs\/|.md/g, '')
-
-	if (link.includes('#'))
-		return sql<
-			Reference[]
-		>`SELECT title, content, summary, link FROM doc_chunks WHERE link = ${link} LIMIT 1`.then(
-			(x) => (x[0] ? Object.assign(x[0], { score: 1 }) : [])
-		)
-
-	return sql<
-		Reference[]
-	>`SELECT title, content, summary, link FROM doc_chunks WHERE link LIKE ${link + '%'}`.then(
-		(x) => x.map((r) => Object.assign(r, { score: 1 }))
-	)
-}
-
-export async function search(value: string, abortSignal?: AbortSignal) {
-	const { embedding } = await retry(() =>
-		embed({
-			model: openai.embeddingModel('text-embedding-3-small'),
-			value,
-			abortSignal
-		})
-	)
-
-	return sql.unsafe<Reference[]>(SQL.findReference, [
-		`[${embedding.join(',')}]`
-	])
-}
-
 export const deduplicateReferences = (references: Reference[]) => {
 	const links = new Set<string>()
 
@@ -73,3 +41,26 @@ export const deduplicateReferences = (references: Reference[]) => {
 		return true
 	})
 }
+
+export const createMessages = (
+	message: string,
+	references: Reference[],
+	history: History
+) =>
+	[
+		{
+			role: 'system',
+			content: references.length
+				? `${instruction}\nPage Data:\n${references
+						.map((x) => `# ${x.title}\n${x.summary || x.content}`)
+						.join('\n')}`
+				: instruction
+		},
+		...compressHistory(history),
+		{
+			role: 'user',
+			content: history?.length
+				? message
+				: `Hi Elysia chan! ${message}. Would you kindly help me?`
+		}
+	] as ModelMessage[]

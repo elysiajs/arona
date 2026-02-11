@@ -1,28 +1,31 @@
 import { Elysia, t } from 'elysia'
 import { startSpan } from '@elysiajs/opentelemetry'
 
+import { powMacro } from '@arona/modules/pow'
 import {
 	API_KEY,
 	cache,
 	isDev,
 	log,
 	logger,
-	pow,
+	rateLimitMacro,
 	retry,
 	structure,
-	turnstile
+	turnstileMacro
 } from '@arona/libs'
-import {
-	ask,
-	deduplicateReferences,
-	Models,
-	rateLimit,
-	readPage,
-	type Reference
-} from './libs'
+
+import { deduplicateReferences } from './libs'
+import { AI } from './service'
+import { Models, Reference } from './model'
 
 export const ai = new Elysia()
-	.use([logger.into(), rateLimit, pow, turnstile])
+	.model(Models)
+	.prefix('model', 'AI.')
+	.decorate({ AI })
+	.use(logger.into())
+	.use(powMacro)
+	.use(rateLimitMacro)
+	.use(turnstileMacro)
 	.patch('/database/index', async ({ headers, status }) => {
 		if (headers['x-api-key'] !== API_KEY) return status(404)
 
@@ -65,16 +68,18 @@ export const ai = new Elysia()
 	.post(
 		'/ask',
 		async function* ({
-			request,
+			AI,
 			body: { seed, message, history, reference: requestedPage, think },
-			ip
+			ip,
+			request
 		}) {
 			const references: Reference[] = []
 			if (requestedPage) {
 				const pages = await retry(() =>
 					cache(
 						`page:${requestedPage}`,
-						() => readPage(requestedPage) as unknown as Reference[]
+						() =>
+							AI.readPage(requestedPage) as unknown as Reference[]
 					)
 				)
 
@@ -89,7 +94,7 @@ export const ai = new Elysia()
 
 			let logId: string | undefined
 
-			const stream = await ask({
+			const stream = await AI.ask({
 				abortSignal: request.signal,
 				seed,
 				message,
@@ -150,10 +155,10 @@ export const ai = new Elysia()
 		},
 		{
 			headers: 'turnstile',
-			body: Models.ask,
+			body: 'AI.Ask',
 			parse: 'json',
 			AIRateLimit: true,
 			turnstile: true,
-			pow: !isDev
+			pow: !isDev as true
 		}
 	)

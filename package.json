@@ -13,7 +13,6 @@
 		"@ai-sdk/openai": "^3.0.11",
 		"@bogeychan/elysia-logger": "^0.1.10",
 		"@elysiajs/cors": "^1.4.1",
-		"@elysiajs/cron": "^1.4.1",
 		"@elysiajs/openapi": "^1.4.13",
 		"@elysiajs/opentelemetry": "^1.4.10",
 		"@opentelemetry/exporter-trace-otlp-proto": "^0.210.0",

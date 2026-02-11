@@ -1,3 +1,7 @@
+import { Elysia } from 'elysia'
+
+import { isDev } from './flags'
+import { ipMacro } from './ip'
 import { redis } from './redis'
 
 export async function rateLimit(key: string, limit: number, seconds: number) {
@@ -25,3 +29,24 @@ export async function rateLimit(key: string, limit: number, seconds: number) {
 		retryAfter: Math.max(0, oldest[0][1] + seconds * 1000 - now)
 	} as const
 }
+
+export const rateLimitMacro = new Elysia().use(ipMacro).macro('AIRateLimit', {
+	ip: true,
+	async beforeHandle({ ip, status, set }) {
+		if (isDev) return
+
+		const limit = await rateLimit(`ip:${ip}`, 11, 60)
+		if (limit.allowed) return
+
+		set.headers['Retry-After'] = limit.retryAfter / 1000
+		set.headers['X-RateLimit-Limit'] = 11
+		set.headers['X-RateLimit-Remaining'] = 0
+		set.headers['X-RateLimit-Reset'] = Math.ceil(
+			(Date.now() + limit.retryAfter) / 1000
+		)
+
+		return status(429, {
+			message: `Ratelimit exceeded. Please try again in ${set.headers['Retry-After']} seconds.`
+		})
+	}
+})

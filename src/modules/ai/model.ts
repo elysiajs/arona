@@ -1,8 +1,8 @@
-import { t } from 'elysia'
+import { t, type UnwrapSchema } from 'elysia'
 import z from 'zod'
 
-export namespace Models {
-	export const ask = t.Object({
+export const Models = {
+	ask: t.Object({
 		seed: t.Optional(t.Number()),
 		reference: t.Optional(t.String()),
 		message: t.String({
@@ -22,11 +22,8 @@ export namespace Models {
 				}
 			)
 		)
-	})
-
-	export type ask = (typeof ask)['static']
-
-	export const reference = z.object({
+	}),
+	reference: z.object({
 		title: z.string().describe('The title of the page'),
 		content: z.string().describe('The content excerpt of the page'),
 		score: z.number().describe('The relevance score of the page'),
@@ -35,13 +32,24 @@ export namespace Models {
 				'The link of the page to read from Elysia documentation',
 			examples: ['essential/life-cycle']
 		})
-	})
+	}),
+	get references() {
+		return this.reference.or(z.array(this.reference)).nullable().meta({
+			description: 'The reference(s) retrieved from the page.'
+		})
+	}
+}
 
-	export type Reference = z.infer<typeof reference>
+export type Models = {
+	[k in keyof typeof Models]: UnwrapSchema<typeof Models[k]>
+}
 
-	export const references = reference.or(z.array(reference)).nullable().meta({
-		description: 'The reference(s) retrieved from the page.'
-	})
+export type History = Models['ask']['history']
 
-	export type References = z.infer<typeof references>
+export interface Reference {
+	link: string
+	title: string
+	content: string
+	summary: string
+	score: number
 }

@@ -1,15 +1,15 @@
 import { Elysia, t } from 'elysia'
 
 import { API_KEY, isDev } from './flags'
-import { ip } from './ip'
+import { ipMacro } from './ip'
 import { rateLimit } from './rate-limit'
 import { retry } from './retry'
 
 if (!process.env.TURNSTILE_SECRET)
 	throw new Error('TURNSTILE_SECRET is not set')
 
-export const turnstile = new Elysia()
-	.use(ip)
+export const turnstileMacro = new Elysia()
+	.use(ipMacro)
 	.model({
 		turnstile: t.Object(
 			{
