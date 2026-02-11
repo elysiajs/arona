@@ -44,15 +44,15 @@ export const structure = async () => {
 	  	embedding VECTOR(1536) NOT NULL,
 		title_embedding VECTOR(1536) NOT NULL,
 		file_name_embedding VECTOR(1536) NOT NULL,
-		sequence smallint
+		sequence smallint,
+		tsv tsvector GENERATED ALWAYS AS (to_tsvector('english', content)) STORED
 	);`
-	await sql`CREATE INDEX doc_chunks_file_idx ON doc_chunks (file);`.catch(
+	await sql`CREATE INDEX idx_doc_chunks_tsv ON documents USING gin(tsv);`.catch(
 		() => {}
 	)
-	// await sql`CREATE INDEX ON doc_chunks USING ivfflat (embedding vector_l2_ops) WITH (lists = 100);`.catch(
-	// 	() => {}
-	// )
-	// await sql`SET ivfflat.probes = 10`.catch(() => {})
+	await sql`CREATE INDEX idx_doc_chunks_file ON doc_chunks (file);`.catch(
+		() => {}
+	)
 
 	log('Database structure setup completed')
 

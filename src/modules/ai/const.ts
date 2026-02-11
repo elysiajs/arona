@@ -26,7 +26,7 @@ export const SQL = {
 	  FROM ranked
 	  WHERE score > 0.375
 	  ORDER BY score DESC
-	  LIMIT 5
+	  LIMIT $2
 	),
 	chunk AS (
 	  SELECT
@@ -40,7 +40,7 @@ export const SQL = {
 	  FROM filtered f
 	  JOIN doc_chunks dc
 		ON dc.file = f.file
-		AND dc.sequence BETWEEN f.sequence - 1 AND f.sequence + 1
+		AND dc.sequence BETWEEN f.sequence AND f.sequence + 1
 	  ORDER BY score, sequence
 	)
 	SELECT

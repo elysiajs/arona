@@ -142,17 +142,103 @@ export async function readPage(link: string): Promise<Reference | Reference[]> {
 }
 
 export async function search(value: string, abortSignal?: AbortSignal) {
-	const { embedding } = await retry(() =>
-		embed({
-			model: openai.embeddingModel('text-embedding-3-small'),
-			value,
-			abortSignal
-		})
+	const references = await sql<Reference[]>`WITH raw AS (
+	  SELECT
+	    d.file,
+	    d.link,
+	    d.title,
+	    d.sequence,
+	    d.content,
+	    d.summary,
+	    d.weight,
+	    ts_rank(d.tsv, query) AS r
+	  FROM
+	    doc_chunks d,
+	    plainto_tsquery('english', ${value}) query
+	  WHERE
+	    d.tsv @@ query
+	),
+	normalized AS (
+	  SELECT
+	    *,
+	    r / NULLIF(
+	      MAX(r) OVER (),
+	      0
+	    ) AS r_norm
+	  FROM
+	    raw
+	),
+	filtered AS (
+	  SELECT
+	    DISTINCT ON (file) file,
+	    link,
+	    title,
+	    sequence,
+	    content,
+	    summary,
+	    (0.75 * r_norm + 0.25 * weight) AS score
+	  FROM
+	    normalized
+	  ORDER BY
+	    file,
+	    score DESC
+	),
+	chunk AS (
+	  SELECT
+	    f.file,
+	    f.link,
+	    f.title,
+	    dc.content,
+	    dc.summary,
+	    dc.sequence,
+	    f.score as score
+	  FROM
+	    filtered f
+	    JOIN doc_chunks dc ON dc.file = f.file
+	    AND dc.sequence BETWEEN f.sequence
+	    AND f.sequence + 1
+	  ORDER BY
+	    score,
+	    sequence
 	)
+	SELECT
+	  c.link,
+	  c.title,
+	  string_agg(c.content, E'\n') AS content,
+	  string_agg(c.summary, E'\n') AS summary,
+	  c.score
+	FROM
+	  chunk c
+	WHERE
+	  c.score > 0.75
+	GROUP BY
+	  c.file,
+	  c.title,
+	  c.score,
+	  c.link
+	ORDER BY
+	  c.score DESC
+	LIMIT 5;`.then((x) => [...x])
 
-	return sql.unsafe<Reference[]>(SQL.findReference, [
-		`[${embedding.join(',')}]`
-	])
+	if (references.length < 5) {
+		const { embedding } = await retry(() =>
+			embed({
+				model: openai.embeddingModel('text-embedding-3-small'),
+				value,
+				abortSignal
+			})
+		)
+
+		const vectorResult = await sql
+			.unsafe<
+				Reference[]
+			>(SQL.findReference, [`[${embedding.join(',')}]`, 5 - references.length])
+			.then((x) => [...x])
+
+		references.push(...vectorResult)
+	}
+
+	return references
 }
 
 export const AI = {

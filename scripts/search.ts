@@ -1,4 +1,4 @@
-import { search } from '@arona/modules/ai/libs'
+import { search } from '@arona/modules/ai/service'
 import { SQL } from '@arona/modules/ai/const'
 
-await search('openapi').then(console.log)
+await search('hono').then(console.log)
