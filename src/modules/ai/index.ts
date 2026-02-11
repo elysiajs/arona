@@ -14,8 +14,8 @@ import {
 	turnstileMacro
 } from '@arona/libs'
 
-import { deduplicateReferences } from './libs'
 import { AI } from './service'
+import { deduplicateReferences } from './libs'
 import { Models, Reference } from './model'
 
 export const ai = new Elysia()

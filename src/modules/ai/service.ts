@@ -63,7 +63,7 @@ export async function ask({
 								// 			activeTools: ['table_of_contents']
 								// 		}
 								// },
-								stopWhen: stepCountIs(think ? 12 : 7),
+								stopWhen: stepCountIs(think ? 10 : 7),
 								seed,
 								activeTools: ['readPage', 'search'],
 								messages: [
@@ -73,10 +73,9 @@ export async function ask({
 											? `${instruction}\n---\n# Page: ${references[0].title}\n${references
 													.map(
 														(x) =>
-															// summarized page are extremely hard to summarize again
-															`## ${x.title}\n${x.content}`
+															`## ${x.title}\n${x.summary}${x.content}`
 													)
-													.join('\n')}`
+													.join('\n\n')}`
 											: instruction
 									},
 									...compressHistory(history),

@@ -1,5 +1,4 @@
-import { sql } from '../src/libs'
-import { readPage } from '../src/modules/ai/libs'
+import { readPage } from '@arona/modules/ai/service';
 
 const file = 'patterns/openapi'
 

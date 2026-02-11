@@ -1,6 +1,6 @@
 import { createOpenAI } from '@ai-sdk/openai'
-import { createGroq } from '@ai-sdk/groq'
-// import { createCerebras } from '@ai-sdk/cerebras'
+// import { createGroq } from '@ai-sdk/groq'
+import { createCerebras } from '@ai-sdk/cerebras'
 
 const cfAccountId = process.env.CF_ACCOUNT_ID
 const aiGatewayKey = process.env.AI_GATEWAY_KEY
@@ -18,23 +18,23 @@ export const openai = createOpenAI({
 	apiKey: oaiKey
 })
 
-export const groq = createGroq({
-	baseURL: `${baseURL}/groq`,
-	headers: {
-		'cf-aig-authorization': `Bearer ${aiGatewayKey}`
-	}
-})
-
-export const model = groq('openai/gpt-oss-120b')
-
-// export const cerebras = createCerebras({
-// 	baseURL: `${baseURL}/cerebras`,
+// export const groq = createGroq({
+// 	baseURL: `${baseURL}/groq`,
 // 	headers: {
 // 		'cf-aig-authorization': `Bearer ${aiGatewayKey}`
 // 	}
 // })
 
-// export const model = cerebras('gpt-oss-120b')
+// export const model = groq('openai/gpt-oss-120b')
+
+export const cerebras = createCerebras({
+	baseURL: `${baseURL}/cerebras`,
+	headers: {
+		'cf-aig-authorization': `Bearer ${aiGatewayKey}`
+	}
+})
+
+export const model = cerebras('gpt-oss-120b')
 
 export const tableOfContents = `
 ## Table of Contents
