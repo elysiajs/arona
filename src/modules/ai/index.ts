@@ -123,7 +123,6 @@ export const ai = new Elysia()
 
 					const ai = startSpan('AI Log')
 					ai.setAttributes(attributes)
-					log(attributes)
 					ai.end()
 				}
 			}).catch((err) => new Error(err))
