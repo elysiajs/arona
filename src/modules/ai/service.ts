@@ -218,9 +218,9 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 	  c.link
 	ORDER BY
 	  c.score DESC
-	LIMIT 5;`.then((x) => [...x])
+	LIMIT 4;`.then((x) => [...x])
 
-	if (references.length < 5) {
+	if (references.length < 4) {
 		const { embedding } = await retry(() =>
 			embed({
 				model: openai.embeddingModel('text-embedding-3-small'),
@@ -232,7 +232,7 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 		const vectorResult = await sql
 			.unsafe<
 				Reference[]
-			>(SQL.findReference, [`[${embedding.join(',')}]`, 5 - references.length])
+			>(SQL.findReference, [`[${embedding.join(',')}]`, 4 - references.length])
 			.then((x) => [...x])
 
 		references.push(...vectorResult)

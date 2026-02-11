@@ -215,8 +215,8 @@ export const structure = async () => {
 				chapters.push(newChapter)
 			} else if (
 				// ? set to true to reindex all
-				// true
-				currentChapters[existIndex].content !== newChapter.content
+				true
+				// currentChapters[existIndex].content !== newChapter.content
 			)
 				chapters.push(newChapter)
 		}
@@ -287,7 +287,7 @@ export const structure = async () => {
 						() =>
 							generateText({
 								model,
-								prompt: `Would you kindly summarize this into a SKILLS.md section so you can read later. Be conside, use no emoji.\n\n${content}`
+								prompt: `Would you kindly summarize this into a SKILLS.md section so you can read later. Be concise. Sacrifice grammar for the sake of concision while retain as much context as possible.\n\n${content}`
 							})
 								.then((x) => {
 									if (!x.text) throw new Error()
