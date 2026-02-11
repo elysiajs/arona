@@ -1,29 +1,18 @@
-import { record } from '@elysiajs/opentelemetry'
-
-import { type ModelMessage, tool } from 'ai'
+import { tool } from 'ai'
 import * as z from 'zod'
 
-import {
-	retry,
-	log,
-	cache,
-	model,
-	instruction,
-	tableOfContents
-} from '@arona/libs'
+import { retry, log, cache, model, tableOfContents } from '@arona/libs'
 
-import { Models, type Reference } from '../model'
+import { History, Models, type Reference } from '../model'
 import { normalizePage } from './utils'
 import { search, readPage } from '../service'
 
 export const createSearchTool = (references: Reference[]) =>
 	tool({
-		description:
-			'Find relevant information from Elysia documentation. This tool is pure (deterministic), do not call them twice with the same parameters. As result is sub sction, you may need to use "read_page" tool to get more indepth detail.',
+		description: 'Search relevant information.',
 		inputSchema: z.object({
 			sentence: z.string().meta({
-				description:
-					'The keyword/sentence to search in the documentation',
+				description: 'The keyword/sentence to search',
 				examples: ['handler', 'OpenAPI type gen', 'Eden Treaty']
 			})
 		}),
@@ -46,16 +35,11 @@ export const createSearchTool = (references: Reference[]) =>
 
 export const createPageTool = (references: Reference[]) =>
 	tool({
-		description:
-			'Read a specific page with in-depth detail. This tool is pure (deterministic), do not call them twice with the same parameters.',
+		description: 'Read a specific page with in detail',
 		inputSchema: z.object({
 			link: z.string().meta({
-				description:
-					'The link of the page to read from Elysia documentation. Must not end with ".md"',
-				examples: [
-					'essential/handler',
-					'essential/life-cycle#transform'
-				]
+				description: 'The link of the page to read',
+				examples: ['patterns/openapi', 'essential/life-cycle#transform']
 			})
 		}),
 		outputSchema: Models.references,
@@ -79,8 +63,16 @@ export const createPageTool = (references: Reference[]) =>
 
 export const tableOfContentsTool = tool({
 	description:
-		'Gather information about Elysia by listing all available documents pair by title and link. Use link with "read_page" tool to read the page.',
+		'List all available documents. Use "read_page" tool with link to read the page',
 	inputSchema: z.object({}),
 	outputSchema: z.string(),
 	execute: () => tableOfContents
 })
+
+export const createHistoryTool = (execute: () => History) =>
+	tool({
+		description: 'Read conversation history.',
+		inputSchema: z.object({}),
+		outputSchema: Models.history,
+		execute
+	})

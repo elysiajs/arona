@@ -215,8 +215,8 @@ export const structure = async () => {
 				chapters.push(newChapter)
 			} else if (
 				// ? set to true to reindex all
-				true
-				// currentChapters[existIndex].content !== newChapter.content
+				// true
+				currentChapters[existIndex].content !== newChapter.content
 			)
 				chapters.push(newChapter)
 		}

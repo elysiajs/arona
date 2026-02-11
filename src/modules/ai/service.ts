@@ -8,6 +8,7 @@ import {
 import { record } from '@elysiajs/opentelemetry'
 
 import {
+	createHistoryTool,
 	createPageTool,
 	createSearchTool,
 	tableOfContentsTool
@@ -22,7 +23,7 @@ interface AskParams {
 	abortSignal: AbortSignal
 	seed?: number
 	message: string
-	history: History
+	history: History | undefined
 	references: Reference[]
 	ip: string
 	onFinish?: StreamTextOnFinishCallback<{}>
@@ -41,6 +42,9 @@ export async function ask({
 }: AskParams) {
 	const searchTool = createSearchTool(references)
 	const readPageTool = createPageTool(references)
+	const historyTool = history?.length
+		? createHistoryTool(() => compressHistory(history))
+		: undefined
 
 	const stream = await retry(
 		() =>
@@ -52,20 +56,18 @@ export async function ask({
 							const response = streamText({
 								model,
 								abortSignal,
-								tools: {
-									readPage: readPageTool,
-									search: searchTool,
-									table_of_contents: tableOfContentsTool
-								},
-								// prepareStep({ stepNumber }) {
-								// 	if (stepNumber === 0)
-								// 		return {
-								// 			activeTools: ['table_of_contents']
-								// 		}
-								// },
+								tools: Object.assign(
+									{
+										readPage: readPageTool,
+										search: searchTool,
+										tableOfContents: tableOfContentsTool
+									},
+									history?.length
+										? { historyTool: historyTool! }
+										: {}
+								) as any,
 								stopWhen: stepCountIs(think ? 10 : 7),
 								seed,
-								activeTools: ['readPage', 'search'],
 								messages: [
 									{
 										role: 'system',
@@ -73,12 +75,11 @@ export async function ask({
 											? `${instruction}\n---\n# Page: ${references[0].title}\n${references
 													.map(
 														(x) =>
-															`## ${x.title}\n${x.summary}${x.content}`
+															`## ${x.title}\n${x.summary}`
 													)
 													.join('\n\n')}`
 											: instruction
 									},
-									...compressHistory(history),
 									{
 										role: 'user',
 										content: history?.length
@@ -130,13 +131,13 @@ export async function readPage(link: string): Promise<Reference | Reference[]> {
 	if (link.includes('#'))
 		return sql<
 			Reference[]
-		>`SELECT title, content, summary, link FROM doc_chunks WHERE link = ${link} LIMIT 1`.then(
+		>`SELECT title, summary, link FROM doc_chunks WHERE link = ${link} LIMIT 1`.then(
 			(x) => (x[0] ? Object.assign(x[0], { score: 1 }) : [])
 		)
 
 	return sql<
 		Reference[]
-	>`SELECT title, content, summary, link FROM doc_chunks WHERE link LIKE ${link + '%'}`.then(
+	>`SELECT title, summary, link FROM doc_chunks WHERE link LIKE ${link + '%'}`.then(
 		(x) => x.map((r) => Object.assign(r, { score: 1 }))
 	)
 }
@@ -148,7 +149,6 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 	    d.link,
 	    d.title,
 	    d.sequence,
-	    d.content,
 	    d.summary,
 	    d.weight,
 	    ts_rank(d.tsv, query) AS r
@@ -174,7 +174,6 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 	    link,
 	    title,
 	    sequence,
-	    content,
 	    summary,
 	    (0.75 * r_norm + 0.25 * weight) AS score
 	  FROM
@@ -188,7 +187,6 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 	    f.file,
 	    f.link,
 	    f.title,
-	    dc.content,
 	    dc.summary,
 	    dc.sequence,
 	    f.score as score
@@ -204,7 +202,6 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 	SELECT
 	  c.link,
 	  c.title,
-	  string_agg(c.content, E'\n') AS content,
 	  string_agg(c.summary, E'\n') AS summary,
 	  c.score
 	FROM

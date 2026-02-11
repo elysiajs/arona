@@ -8,7 +8,6 @@ export const SQL = {
 		d.link,
 	    d.title,
 		d.sequence,
-		d.content,
 		d.summary,
 	    (
 	      ABS(
@@ -33,7 +32,6 @@ export const SQL = {
 		f.file,
 		f.link,
 		f.title,
-		dc.content,
 		dc.summary,
 		dc.sequence,
 		f.score as score
@@ -46,7 +44,6 @@ export const SQL = {
 	SELECT
 	  c.link,
 	  c.title,
-	  string_agg(c.content, E'\n') AS content,
 	  string_agg(c.summary, E'\n') AS summary,
 	  c.score
 	FROM chunk c

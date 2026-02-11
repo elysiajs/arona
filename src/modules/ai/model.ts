@@ -2,6 +2,12 @@ import { t, type UnwrapSchema } from 'elysia'
 import z from 'zod'
 
 export const Models = {
+	history: z.array(
+		z.object({
+			role: z.literal('user').or(z.literal('assistant')),
+			content: z.string().max(16384)
+		})
+	),
 	ask: t.Object({
 		seed: t.Optional(t.Number()),
 		reference: t.Optional(t.String()),
@@ -24,32 +30,24 @@ export const Models = {
 		)
 	}),
 	reference: z.object({
-		title: z.string().describe('The title of the page'),
-		content: z.string().describe('The content excerpt of the page'),
-		score: z.number().describe('The relevance score of the page'),
+		title: z.string(),
+		score: z.number(),
+		summary: z.string(),
 		link: z.string().meta({
-			description:
-				'The link of the page to read from Elysia documentation',
+			description: 'The link of the page to read',
 			examples: ['essential/life-cycle']
 		})
 	}),
 	get references() {
 		return this.reference.or(z.array(this.reference)).nullable().meta({
-			description: 'The reference(s) retrieved from the page.'
+			description: 'References retrieved from the page'
 		})
 	}
 }
 
 export type Models = {
-	[k in keyof typeof Models]: UnwrapSchema<typeof Models[k]>
+	[k in keyof typeof Models]: UnwrapSchema<(typeof Models)[k]>
 }
 
-export type History = Models['ask']['history']
-
-export interface Reference {
-	link: string
-	title: string
-	content: string
-	summary: string
-	score: number
-}
+export type History = Models['history']
+export type Reference = Models['reference']
