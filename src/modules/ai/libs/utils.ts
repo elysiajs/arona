@@ -1,13 +1,11 @@
 import type { ModelMessage } from 'ai'
 
-import { instruction, sql } from '@arona/libs'
-
 import type { History, Reference } from '../model'
 
 export const compressHistory = (history: History) =>
 	history
 		?.map((x) => {
-			if (x.content.length < 2048) return x
+			if (x.content.length < 1280) return x
 
 			const sourceIndex = x.content.lastIndexOf('Sources:\n')
 			const source =
@@ -15,10 +13,10 @@ export const compressHistory = (history: History) =>
 
 			return {
 				...x,
-				content: x.content.slice(0, 2048) + '...' + source
+				content: x.content.slice(0, 1280) + '...' + source
 			}
 		})
-		.slice(-8) ?? []
+		.slice(-5) ?? []
 
 /**
  * Normalize link in case something went wrong (for legacy reasons)
