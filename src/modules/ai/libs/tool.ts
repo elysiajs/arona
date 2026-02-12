@@ -64,7 +64,7 @@ export const createPageTool = (references: Reference[]) =>
 
 export const tableOfContentsTool = tool({
 	description:
-		'List all available documents. Use "read_page" tool with link to read the page',
+		'List all available documents. Call "read_page" tool with link to read the page',
 	inputSchema: z.object({}),
 	outputSchema: z.string(),
 	execute: () => tableOfContents
@@ -72,7 +72,7 @@ export const tableOfContentsTool = tool({
 
 export const createHistoryTool = (execute: () => History) =>
 	tool({
-		description: 'Read conversation history.',
+		description: 'Read conversation history. Call this tool when you think you are missing user context',
 		inputSchema: z.object({}),
 		outputSchema: Models.history,
 		execute
