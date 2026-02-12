@@ -243,7 +243,7 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 	for (const ref of vectorResult) {
 		if (!references.find((r) => r.link === ref.link)) references.push(ref)
 
-		if (references.length >= 6) break
+		if (references.length >= 5) break
 	}
 
 	setAttributes({
