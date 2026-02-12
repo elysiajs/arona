@@ -43,10 +43,8 @@ export async function ask({
 	const searchTool = createSearchTool(references)
 	const readPageTool = createPageTool(references)
 	const historyTool = history?.length
-		? createHistoryTool(() => compressHistory(history))
+		? createHistoryTool(() => compressHistory(history).slice(3).slice(-5))
 		: undefined
-
-	const initialReferences = [...references]
 
 	const initial = references.length
 		? `${instruction}\n---\n# Page: ${references[0].title}\n${references
@@ -70,11 +68,11 @@ export async function ask({
 										search: searchTool,
 										tableOfContents: tableOfContentsTool
 									},
-									history?.length
+									(history?.length ?? 0) > 3
 										? { historyTool: historyTool! }
 										: {}
 								) as any,
-								stopWhen: stepCountIs(think ? 10 : 7),
+								stopWhen: stepCountIs(think ? 9 : 5),
 								seed,
 								messages: [
 									{
@@ -86,7 +84,10 @@ export async function ask({
 										content: history?.length
 											? message
 											: `Hi Elysia chan! ${message}. Would you kindly help me?`
-									}
+									},
+									...(history?.length
+										? compressHistory(history).slice(0, 3)
+										: [])
 								],
 								providerOptions: {
 									groq: {

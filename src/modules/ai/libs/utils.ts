@@ -1,20 +1,18 @@
 import type { History, Reference } from '../model'
 
 export const compressHistory = (history: History) =>
-	history
-		?.map((x) => {
-			if (x.content.length < 1280) return x
+	history?.map((x) => {
+		if (x.content.length < 1280) return x
 
-			const sourceIndex = x.content.lastIndexOf('Sources:\n')
-			const source =
-				sourceIndex !== -1 ? '\n\n' + x.content.slice(sourceIndex) : ''
+		const sourceIndex = x.content.lastIndexOf('Sources:\n')
+		const source =
+			sourceIndex !== -1 ? '\n\n' + x.content.slice(sourceIndex) : ''
 
-			return {
-				...x,
-				content: x.content.slice(0, 1280) + '...' + source
-			}
-		})
-		.slice(-5) ?? []
+		return {
+			...x,
+			content: x.content.slice(0, 1280) + '...' + source
+		}
+	}) ?? []
 
 /**
  * Normalize link in case something went wrong (for legacy reasons)
