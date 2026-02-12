@@ -184,7 +184,7 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 	    title,
 	    sequence,
 	    summary,
-	    (0.75 * r_norm + 0.25 * weight) AS score
+	    (0.775 * r_norm + 0.275 * weight) AS score
 	  FROM
 	    normalized
 	  ORDER BY
@@ -224,24 +224,26 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 	  c.link
 	ORDER BY
 	  c.score DESC
-	LIMIT 4;`.then((x) => [...x])
+	LIMIT 3;`.then((x) => [...x])
 
-	if (references.length < 4) {
-		const { embedding } = await retry(() =>
-			embed({
-				model: openai.embeddingModel('text-embedding-3-small'),
-				value,
-				abortSignal
-			})
-		)
+	const { embedding } = await retry(() =>
+		embed({
+			model: openai.embeddingModel('text-embedding-3-small'),
+			value,
+			abortSignal
+		})
+	)
 
-		const vectorResult = await sql
-			.unsafe<
-				Reference[]
-			>(SQL.findReference, [`[${embedding.join(',')}]`, 4 - references.length])
-			.then((x) => [...x])
+	const vectorResult = await sql
+		.unsafe<
+			Reference[]
+		>(SQL.findReference, [`[${embedding.join(',')}]`, 6 - references.length])
+		.then((x) => [...x])
 
-		references.push(...vectorResult)
+	for (const ref of vectorResult) {
+		if (!references.find((r) => r.link === ref.link)) references.push(ref)
+
+		if (references.length >= 6) break
 	}
 
 	setAttributes({

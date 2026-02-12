@@ -11,9 +11,9 @@ export const SQL = {
 		d.summary,
 	    (
 	      ABS(
-	        0.11 * (d.title_embedding <#> q.embedding) +
-	        0.75  * (d.embedding <#> q.embedding) +
-	        0.075 * (d.file_name_embedding <#> q.embedding) +
+	        0.1 * (d.title_embedding <#> q.embedding) +
+	        0.675  * (d.embedding <#> q.embedding) +
+	        0.1 * (d.file_name_embedding <#> q.embedding) +
 	        0.125  * d.weight * -1
 	      )
 	    ) AS score
@@ -23,7 +23,7 @@ export const SQL = {
 	filtered AS (
 	  SELECT *
 	  FROM ranked
-	  WHERE score >= 0.57
+	  WHERE score >= 0.4
 	  ORDER BY score DESC
 	  LIMIT $2
 	),
