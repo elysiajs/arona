@@ -145,6 +145,13 @@ export async function readPage(link: string): Promise<Reference | Reference[]> {
 }
 
 export async function search(value: string, abortSignal?: AbortSignal) {
+	value = value
+		.toLowerCase()
+		.replace(/elysia|framework|saltyaom|"|'/g, '')
+		.trim()
+
+	if (!value) return []
+
 	const references = await sql<Reference[]>`WITH raw AS (
 	  SELECT
 	    d.file,
@@ -209,7 +216,7 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 	FROM
 	  chunk c
 	WHERE
-	  c.score > 0.75
+	  c.score > 0.725
 	GROUP BY
 	  c.file,
 	  c.title,

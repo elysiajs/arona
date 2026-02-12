@@ -11,10 +11,10 @@ export const SQL = {
 		d.summary,
 	    (
 	      ABS(
-	        0.1125 * (d.title_embedding <#> q.embedding) +
-	        0.625  * (d.embedding <#> q.embedding) +
-	        0.0875 * (d.file_name_embedding <#> q.embedding) +
-	        0.175  * d.weight * -1
+	        0.11 * (d.title_embedding <#> q.embedding) +
+	        0.75  * (d.embedding <#> q.embedding) +
+	        0.075 * (d.file_name_embedding <#> q.embedding) +
+	        0.125  * d.weight * -1
 	      )
 	    ) AS score
 	  FROM doc_chunks d, q
@@ -23,7 +23,7 @@ export const SQL = {
 	filtered AS (
 	  SELECT *
 	  FROM ranked
-	  WHERE score > 0.55
+	  WHERE score >= 0.57
 	  ORDER BY score DESC
 	  LIMIT $2
 	),
