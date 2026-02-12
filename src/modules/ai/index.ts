@@ -6,7 +6,6 @@ import {
 	API_KEY,
 	cache,
 	isDev,
-	log,
 	logger,
 	rateLimitMacro,
 	retry,
@@ -32,38 +31,6 @@ export const ai = new Elysia()
 		await structure()
 
 		return 'ok'
-	})
-	.use((app) => {
-		const GATEWAY_ID = process.env.AI_GATEWAY_ID
-		const ACCOUNT_ID = process.env.CF_ACCOUNT_ID
-
-		if (!ACCOUNT_ID || !GATEWAY_ID) return app
-
-		return app.post(
-			'/feedback/:id',
-			({ body, status, params: { id } }) =>
-				retry(() =>
-					fetch(
-						`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/ai-gateway/gateways/${GATEWAY_ID}/logs/${id}`,
-						{
-							method: 'PATCH',
-							headers: {
-								'Content-Type': 'application/json',
-								Authorization: `Bearer ${process.env.AI_GATEWAY_KEY}`
-							},
-							body: JSON.stringify({
-								feedback: body ? 1 : -1
-							})
-						}
-					)
-				)
-					.then(() => body)
-					.catch(() => status(418)),
-			{
-				parse: 'text',
-				body: t.Boolean()
-			}
-		)
 	})
 	.post(
 		'/ask',
@@ -156,8 +123,41 @@ export const ai = new Elysia()
 			headers: 'turnstile',
 			body: 'AI.Ask',
 			parse: 'json',
-			AIRateLimit: true,
 			turnstile: true,
 			pow: !isDev as true
 		}
 	)
+
+// Separate from main app so it doesn't has type inference
+ai.use((app) => {
+	const GATEWAY_ID = process.env.AI_GATEWAY_ID
+	const ACCOUNT_ID = process.env.CF_ACCOUNT_ID
+
+	if (!ACCOUNT_ID || !GATEWAY_ID) return app
+
+	return app.post(
+		'/feedback/:id',
+		({ body, status, params: { id } }) =>
+			retry(() =>
+				fetch(
+					`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/ai-gateway/gateways/${GATEWAY_ID}/logs/${id}`,
+					{
+						method: 'PATCH',
+						headers: {
+							'Content-Type': 'application/json',
+							Authorization: `Bearer ${process.env.AI_GATEWAY_KEY}`
+						},
+						body: JSON.stringify({
+							feedback: body ? 1 : -1
+						})
+					}
+				)
+			)
+				.then(() => body)
+				.catch(() => status(418)),
+		{
+			parse: 'text',
+			body: t.Boolean()
+		}
+	)
+})

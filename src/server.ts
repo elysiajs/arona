@@ -21,7 +21,10 @@ export const app = new Elysia({
 	.use(
 		openapi({
 			enabled: isDev,
-			references: fromTypes('src/server.ts')
+			references: fromTypes('src/server.ts', {
+				// tmpRoot: './q',
+				// debug: true
+			})
 		})
 	)
 	.use(

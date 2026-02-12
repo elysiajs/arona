@@ -26,10 +26,10 @@ export const turnstileMacro = new Elysia()
 			if (isDev || headers['x-api-key'] === API_KEY) return
 
 			if (!headers['x-turnstile-token'])
-				return status(400, {
-					message:
-						'Missing verification token. Please try reloading the page.'
-				})
+				return status(
+					403,
+					'Missing verification token. Please try reloading the page.'
+				)
 
 			const limit = await rateLimit(`ip:${ip}`, 8, 35)
 			if (!limit.allowed) {
@@ -40,9 +40,10 @@ export const turnstileMacro = new Elysia()
 					(Date.now() + limit.retryAfter) / 1000
 				)
 
-				return status(429, {
-					message: `Ratelimit exceeded. Please try again in ${set.headers['Retry-After']} seconds.`
-				})
+				return status(
+					429,
+					`Ratelimit exceeded. Please try again in ${set.headers['Retry-After']} seconds.`
+				)
 			}
 
 			const formData = new FormData()
@@ -68,9 +69,9 @@ export const turnstileMacro = new Elysia()
 			)
 
 			if (!data.success)
-				return status(400, {
-					message:
-						'Verification failed. Please try reloading the page.'
-				})
+				return status(
+					403,
+					'Verification failed. Please try reloading the page.'
+				)
 		}
 	})

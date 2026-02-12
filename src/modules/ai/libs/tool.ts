@@ -9,7 +9,8 @@ import { search, readPage } from '../service'
 
 export const createSearchTool = (references: Reference[]) =>
 	tool({
-		description: 'Search relevant information.',
+		description:
+			"Search relevant information. This tool is deterministic, don't call with the same parameters twice",
 		inputSchema: z.object({
 			sentence: z.string().meta({
 				description: 'The keyword/sentence to search',
@@ -35,7 +36,7 @@ export const createSearchTool = (references: Reference[]) =>
 
 export const createPageTool = (references: Reference[]) =>
 	tool({
-		description: 'Read a specific page with in detail',
+		description: `Read a specific page with in detail. This tool is deterministic, don't call with the same parameters twice`,
 		inputSchema: z.object({
 			link: z.string().meta({
 				description: 'The link of the page to read',

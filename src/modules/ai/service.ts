@@ -5,7 +5,7 @@ import {
 	type StreamTextOnFinishCallback
 } from 'ai'
 
-import { record } from '@elysiajs/opentelemetry'
+import { record, setAttributes } from '@elysiajs/opentelemetry'
 
 import {
 	createHistoryTool,
@@ -46,9 +46,17 @@ export async function ask({
 		? createHistoryTool(() => compressHistory(history))
 		: undefined
 
+	const initialReferences = [...references]
+
+	const initial = references.length
+		? `${instruction}\n---\n# Page: ${references[0].title}\n${references
+				.map((x) => `## ${x.title}\n${x.summary}`)
+				.join('\n\n')}`
+		: instruction
+
 	const stream = await retry(
-		() =>
-			record(
+		() => {
+			return record(
 				'Gather Resources',
 				async (span) =>
 					await new Promise<AsyncGenerator<string, any, any>>(
@@ -71,14 +79,7 @@ export async function ask({
 								messages: [
 									{
 										role: 'system',
-										content: references.length
-											? `${instruction}\n---\n# Page: ${references[0].title}\n${references
-													.map(
-														(x) =>
-															`## ${x.title}\n${x.summary}`
-													)
-													.join('\n\n')}`
-											: instruction
+										content: initial
 									},
 									{
 										role: 'user',
@@ -117,9 +118,10 @@ export async function ask({
 							reject('Retry')
 						}
 					)
-			),
+			)
+		},
 		3,
-		0
+		(n) => Math.pow(2, n) * 1000
 	)
 
 	return stream
@@ -234,6 +236,10 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 
 		references.push(...vectorResult)
 	}
+
+	setAttributes({
+		'ai.resources': references.map((x) => x.link)
+	})
 
 	return references
 }

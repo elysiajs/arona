@@ -1,5 +1,3 @@
-import type { ModelMessage } from 'ai'
-
 import type { History, Reference } from '../model'
 
 export const compressHistory = (history: History) =>
@@ -39,26 +37,3 @@ export const deduplicateReferences = (references: Reference[]) => {
 		return true
 	})
 }
-
-export const createMessages = (
-	message: string,
-	references: Reference[],
-	history: History
-) =>
-	[
-		{
-			role: 'system',
-			content: references.length
-				? `${instruction}\nPage Data:\n${references
-						.map((x) => `# ${x.title}\n${x.summary || x.content}`)
-						.join('\n')}`
-				: instruction
-		},
-		...compressHistory(history),
-		{
-			role: 'user',
-			content: history?.length
-				? message
-				: `Hi Elysia chan! ${message}. Would you kindly help me?`
-		}
-	] as ModelMessage[]

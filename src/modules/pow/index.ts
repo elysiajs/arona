@@ -86,7 +86,7 @@ export const powMacro = new Elysia({
 			const requiredPrefix = '0'.repeat(challenge.value.bits / 4)
 
 			if (!hash.startsWith(requiredPrefix))
-				return status(400, 'Invalid proof of work')
+				return status(403, 'Invalid proof of work')
 
 			challenge.remove()
 		}

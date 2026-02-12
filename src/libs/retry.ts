@@ -13,7 +13,7 @@ export const retry = <T>(
 
 				resolve(temp as Awaited<T>)
 			} catch (err) {
-				if (n > 0)
+				if (n - 1 > 0)
 					setTimeout(
 						() => attempt(n - 1),
 						typeof delay === 'function' ? delay(n - 1) : n

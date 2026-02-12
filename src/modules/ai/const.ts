@@ -23,7 +23,7 @@ export const SQL = {
 	filtered AS (
 	  SELECT *
 	  FROM ranked
-	  WHERE score > 0.375
+	  WHERE score > 0.55
 	  ORDER BY score DESC
 	  LIMIT $2
 	),

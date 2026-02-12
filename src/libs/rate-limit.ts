@@ -45,8 +45,9 @@ export const rateLimitMacro = new Elysia().use(ipMacro).macro('AIRateLimit', {
 			(Date.now() + limit.retryAfter) / 1000
 		)
 
-		return status(429, {
-			message: `Ratelimit exceeded. Please try again in ${set.headers['Retry-After']} seconds.`
-		})
+		return status(
+			429,
+			`Ratelimit exceeded. Please try again in ${set.headers['Retry-After']} seconds.`
+		)
 	}
 })
