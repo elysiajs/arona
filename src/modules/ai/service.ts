@@ -1,5 +1,6 @@
 import {
 	embed,
+	ModelMessage,
 	stepCountIs,
 	streamText,
 	type StreamTextOnFinishCallback
@@ -46,11 +47,31 @@ export async function ask({
 		? createHistoryTool(() => compressHistory(history).slice(3).slice(-5))
 		: undefined
 
-	const initial = references.length
-		? `${instruction}\n---\n# Page: ${references[0].title}\n${references
-				.map((x) => `## ${x.title}\n${x.summary}`)
-				.join('\n\n')}`
-		: instruction
+	const initialReference = references.length
+		? ({
+				role: 'tool',
+				content: [
+					{
+						type: 'tool-result',
+						toolCallId: 'reference-page',
+						toolName: 'reference-page',
+						output: {
+							type: 'content',
+							value: [
+								{
+									type: 'text',
+									text: `${instruction}\n---\n# Page: ${references[0].title}\n${references
+										.map(
+											(x) => `## ${x.title}\n${x.summary}`
+										)
+										.join('\n\n')}`
+								}
+							]
+						}
+					}
+				]
+			} satisfies ModelMessage)
+		: undefined
 
 	const stream = await retry(
 		() => {
@@ -77,14 +98,17 @@ export async function ask({
 								messages: [
 									{
 										role: 'system',
-										content: initial
+										content: instruction
 									},
 									{
 										role: 'user',
 										content: history?.length
 											? message
-											: `Hi Elysia chan! ${message}. Would you kindly help me?`
+											: `Hi Elysia chan! Would you kindly help me? ${message}`
 									},
+									...(initialReference
+										? [initialReference]
+										: []),
 									...(history?.length
 										? compressHistory(history).slice(0, 3)
 										: [])
