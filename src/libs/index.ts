@@ -1,6 +1,7 @@
 export * from './ai'
 export { cache } from './cache'
 export { sql } from './database'
+export { getEmbedding, getEmbeddingBuffer, stripFillers } from './embedding'
 export * from './flags'
 export { ipMacro } from './ip'
 export { log, logger } from './log'

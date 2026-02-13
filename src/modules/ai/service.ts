@@ -14,7 +14,15 @@ import {
 	createSearchTool,
 	tableOfContentsTool
 } from './libs/tool'
-import { cache, instruction, model, openai, retry, sql } from '@arona/libs'
+import {
+	cache,
+	getEmbedding,
+	instruction,
+	model,
+	openai,
+	retry,
+	sql
+} from '@arona/libs'
 
 import { compressHistory } from './libs'
 import type { History, Reference } from './model'
@@ -235,18 +243,10 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 	  c.score DESC
 	LIMIT 3;`.then((x) => [...x])
 
-	const { embedding } = await retry(() =>
-		embed({
-			model: openai.embeddingModel('text-embedding-3-small'),
-			value,
-			abortSignal
-		})
-	)
-
 	const vectorResult = await sql
 		.unsafe<
 			Reference[]
-		>(SQL.findReference, [`[${embedding.join(',')}]`, 6 - references.length])
+		>(SQL.findReference, [`[${await getEmbedding(value).then((x) => x.join(','))}]`, 6 - references.length])
 		.then((x) => [...x])
 
 	for (const ref of vectorResult) {

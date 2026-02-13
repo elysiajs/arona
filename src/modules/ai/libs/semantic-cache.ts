@@ -1,15 +1,5 @@
-import { embed } from 'ai'
-import { log, openai, redis, retry } from '@arona/libs'
+import { getEmbeddingBuffer, log, redis, stripFillers } from '@arona/libs'
 import { cyrb53 } from './utils'
-
-const fillerPattern =
-	/^(?:can you tell me|i would like to|would you kindly|i was wondering|just wondering|quick question|do you know|help me with|i want to|i need to|could you|would you|can you|tell me|show me|help me|please|hello|hey|hi|pls|plz)\s+/gi
-
-const stripFillers = (q: string) => {
-	while (fillerPattern.test(q)) q = q.replace(fillerPattern, '')
-
-	return q.replace(/[()\[\]{}@#$%^&*!?]/g, '').trim()
-}
 
 const shouldNotCache = (prompt: string) =>
 	prompt.length > 160 || !isNaN(+prompt) || prompt.includes('```')
@@ -21,11 +11,6 @@ export abstract class SemanticCache {
 		prompt = stripFillers(prompt)
 
 		try {
-			const { embedding } = await embed({
-				model: openai.embedding('text-embedding-3-small'),
-				value: prompt
-			})
-
 			// @ts-ignore
 			const response: [
 				count: number,
@@ -44,7 +29,10 @@ export abstract class SemanticCache {
 					'PARAMS',
 					'2',
 					'vec',
-					Buffer.from(new Float32Array(embedding).buffer),
+					await getEmbeddingBuffer(prompt, {
+						ttl: 180,
+						skipFiller: true
+					}),
 					'DIALECT',
 					'2',
 					'RETURN',
@@ -63,7 +51,9 @@ export abstract class SemanticCache {
 
 			if (similarity < 0.92) return null
 
-			log('Semantic Cache Hit with similarity:', similarity.toFixed(4))
+			log(
+				`Semantic Cache Hit with similarity: ${similarity.toFixed(4)} for: "${prompt}"`
+			)
 
 			return cached
 		} catch {
@@ -79,17 +69,13 @@ export abstract class SemanticCache {
 		const key = `cache:${cyrb53(prompt)}`
 
 		try {
-			const { embedding } = await retry(() =>
-				embed({
-					model: openai.embeddingModel('text-embedding-3-small'),
-					value: prompt
-				})
-			)
-
 			const result = await redis.hset(key, {
 				prompt,
 				response,
-				embedding: Buffer.from(new Float32Array(embedding).buffer)
+				embedding: await getEmbeddingBuffer(prompt, {
+					ttl: 180,
+					skipFiller: true
+				})
 			})
 
 			await redis.expire(key, 10_800)
