@@ -15,7 +15,7 @@ import {
 } from '@arona/libs'
 
 import { AI } from './service'
-import { createCacheKey, deduplicateReferences } from './libs'
+import { createCacheKey, deduplicateReferences, SemanticCache } from './libs'
 import { Models, Reference } from './model'
 
 export const ai = new Elysia()
@@ -61,11 +61,16 @@ export const ai = new Elysia()
 					}
 				} catch {}
 
+			const semanticCache = await SemanticCache.get(message)
+			if (semanticCache) {
+				yield semanticCache
+				return
+			}
+
 			const references: Reference[] = []
 			if (requestedPage) {
-				const pages = await retry(() =>
-					cache(
-						`page:${requestedPage}`,
+				const pages = await cache(`page:${requestedPage}`, () =>
+					retry(
 						() =>
 							AI.readPage(requestedPage) as unknown as Reference[]
 					)
@@ -143,7 +148,16 @@ export const ai = new Elysia()
 			}
 
 			// Intentionally not awaiting to not block the response
-			if (key) redis.set(key, response, 'EX', 10_800)
+			if (key)
+				redis.set(
+					key,
+					response,
+					'EX',
+					// shorter expiration for long messages
+					message.length > 256 ? 1_800 : 10_800
+				)
+
+			SemanticCache.set(message, response)
 		},
 		{
 			headers: 'turnstile',

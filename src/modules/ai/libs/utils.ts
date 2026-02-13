@@ -60,5 +60,5 @@ export const createCacheKey = ({
 	// seed is highly random, don't cache those
 	if (seed || history?.length) return
 
-	return `q:${cyrb53(`${message}:${page ? `:${page}` : ''}${think ? '@' : ''}`)}`
+	return `q:${cyrb53(`${message.replace(/[()\[\]{}@#$%^&*!?]/g, '')}:${page ? `:${page}` : ''}${think ? '@' : ''}`)}`
 }
