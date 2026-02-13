@@ -55,7 +55,7 @@ export const ai = new Elysia()
 					if (cache) {
 						log(`AI Cache hit for '${key}'`)
 
-						yield cache + `\n- id:_`
+						yield cache
 
 						return
 					}
@@ -142,8 +142,6 @@ export const ai = new Elysia()
 
 			// Intentionally not awaiting to not block the response
 			if (key) redis.set(key, response, 'EX', 10_800)
-
-			yield `\n- id:_`
 		},
 		{
 			headers: 'turnstile',
