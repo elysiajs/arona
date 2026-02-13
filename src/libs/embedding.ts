@@ -3,7 +3,6 @@ import { LRUCache } from 'lru-cache'
 
 import { openai } from './ai'
 import { retry } from './retry'
-import { log } from './log'
 
 const fillerPattern =
 	/^(?:can you tell me|i would like to|would you kindly|i was wondering|just wondering|quick question|do you know|help me with|i want to|i need to|could you|would you|can you|tell me|show me|help me|please|hello|hey|hi|pls|plz)\s+/gi

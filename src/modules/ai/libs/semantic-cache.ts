@@ -56,7 +56,10 @@ export abstract class SemanticCache {
 			)
 
 			return cached
-		} catch {
+		} catch (error) {
+			console.log("ERROR Semantic Cache error")
+			console.log(error)
+
 			return
 		}
 	}
