@@ -43,7 +43,7 @@ export function ask({
 }: AskParams) {
 	const searchTool = createSearchTool(references)
 	const readPageTool = createPageTool(references)
-	const historyTool = history?.length
+	const readHistoryTool = history?.length
 		? createHistoryTool(() => compressHistory(history).slice(3).slice(-5))
 		: undefined
 
@@ -73,7 +73,7 @@ export function ask({
 										tableOfContents: tableOfContentsTool
 									},
 									(history?.length ?? 0) > 3
-										? { historyTool: historyTool! }
+										? { readHistory: readHistoryTool! }
 										: {}
 								) as any,
 								stopWhen: stepCountIs(think ? 9 : 5),
