@@ -246,7 +246,7 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 	const vectorResult = await sql
 		.unsafe<
 			Reference[]
-		>(SQL.findReference, [`[${await getEmbedding(value).then((x) => x.join(','))}]`, 6 - references.length])
+		>(SQL.findReference, [`[${await getEmbedding(value).then((x) => x.join(','))}]`, 3])
 		.then((x) => [...x])
 
 	for (const ref of vectorResult) {

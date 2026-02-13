@@ -2,7 +2,7 @@ import { Elysia, t } from 'elysia'
 
 import crypto from 'crypto'
 
-import { ipMacro } from '@arona/libs'
+import { ipMacro, rateLimitMacro } from '@arona/libs'
 import { CONFIG, secret } from './const'
 import { Models } from './model'
 
@@ -11,6 +11,7 @@ export const pow = new Elysia({
 	name: 'pow'
 })
 	.use(ipMacro)
+	.use(rateLimitMacro)
 	.get(
 		'/request',
 		({ ip, cookie: { challenge } }) => {
@@ -35,6 +36,7 @@ export const pow = new Elysia({
 			} as const
 		},
 		{
+			rateLimit: true,
 			ip: true,
 			cookie: t.Cookie({
 				challenge: t.Optional(Models.challengeRecord)

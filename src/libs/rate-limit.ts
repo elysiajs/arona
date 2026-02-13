@@ -7,7 +7,7 @@ import { redis } from './redis'
 export async function rateLimit(key: string, limit: number, seconds: number) {
 	const now = Date.now()
 	const windowStart = now - seconds * 1000
-	const member = `${now}-${Math.random()}`
+	const member = `${now}_${Math.random()}`
 	const zsetKey = `rate:${key}`
 
 	await redis.zremrangebyscore(zsetKey, 0, windowStart)
@@ -22,32 +22,34 @@ export async function rateLimit(key: string, limit: number, seconds: number) {
 		return { allowed: true } as const
 	}
 
-	const oldest = await redis.zrange(zsetKey, 0, 0, 'WITHSCORES')
+	const [, time] = await redis.zrange(zsetKey, 0, 0, 'WITHSCORES')
 
 	return {
 		allowed: false,
-		retryAfter: Math.max(0, oldest[0][1] + seconds * 1000 - now)
+		retryAfter: Math.max(0, +time + seconds * 1000 - now)
 	} as const
 }
 
-export const rateLimitMacro = new Elysia().use(ipMacro).macro('AIRateLimit', {
-	ip: true,
-	async beforeHandle({ ip, status, set }) {
-		if (isDev) return
+export const rateLimitMacro = new Elysia()
+	.use(ipMacro)
+	.macro('rateLimit', () => ({
+		ip: true,
+		async beforeHandle({ ip, status, set }) {
+			if (isDev) return
 
-		const limit = await rateLimit(`ip:${ip}`, 11, 60)
-		if (limit.allowed) return
+			const limit = await rateLimit(`ip:${ip}`, 10, 35)
+			if (limit.allowed) return
 
-		set.headers['Retry-After'] = limit.retryAfter / 1000
-		set.headers['X-RateLimit-Limit'] = 11
-		set.headers['X-RateLimit-Remaining'] = 0
-		set.headers['X-RateLimit-Reset'] = Math.ceil(
-			(Date.now() + limit.retryAfter) / 1000
-		)
+			set.headers['Retry-After'] = limit.retryAfter / 1000
+			set.headers['X-RateLimit-Limit'] = 11
+			set.headers['X-RateLimit-Remaining'] = 0
+			set.headers['X-RateLimit-Reset'] = Math.ceil(
+				(Date.now() + limit.retryAfter) / 1000
+			)
 
-		return status(
-			429,
-			`Ratelimit exceeded. Please try again in ${set.headers['Retry-After']} seconds.`
-		)
-	}
-})
+			return status(
+				429,
+				`Ratelimit exceeded. Please try again in ${set.headers['Retry-After']} seconds.`
+			)
+		}
+	}))
