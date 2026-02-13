@@ -1,4 +1,4 @@
-import type { History, Reference } from '../model'
+import type { History, Models, Reference } from '../model'
 
 export const compressHistory = (history: History) =>
 	history?.map((x) => {
@@ -34,4 +34,31 @@ export const deduplicateReferences = (references: Reference[]) => {
 		links.add(r.link)
 		return true
 	})
+}
+
+export const cyrb53 = (s: string) => {
+	let h = 9
+
+	for (let i = 0; i < s.length; ) h = Math.imul(h ^ s.charCodeAt(i++), 9 ** 9)
+
+	return (h = h ^ (h >>> 9))
+}
+
+export const createCacheKey = ({
+	seed,
+	page,
+	message,
+	think,
+	history
+}: {
+	message: string
+	seed: number | undefined
+	page: string | undefined
+	think: boolean | undefined
+	history: Models['ask']['history']
+}) => {
+	// seed is highly random, don't cache those
+	if (seed || history?.length) return
+
+	return `q:${cyrb53(`message:${page ? `:${page}` : ''}${think ? '@' : ''}`)}`
 }

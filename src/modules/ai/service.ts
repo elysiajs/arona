@@ -14,7 +14,7 @@ import {
 	createSearchTool,
 	tableOfContentsTool
 } from './libs/tool'
-import { instruction, model, openai, retry, sql } from '@arona/libs'
+import { cache, instruction, model, openai, retry, sql } from '@arona/libs'
 
 import { compressHistory } from './libs'
 import type { History, Reference } from './model'
@@ -31,7 +31,7 @@ interface AskParams {
 	think?: boolean
 }
 
-export async function ask({
+export function ask({
 	abortSignal,
 	seed,
 	message,
@@ -49,31 +49,14 @@ export async function ask({
 
 	const initialReference = references.length
 		? ({
-				role: 'tool',
-				content: [
-					{
-						type: 'tool-result',
-						toolCallId: 'reference-page',
-						toolName: 'reference-page',
-						output: {
-							type: 'content',
-							value: [
-								{
-									type: 'text',
-									text: `${instruction}\n---\n# Page: ${references[0].title}\n${references
-										.map(
-											(x) => `## ${x.title}\n${x.summary}`
-										)
-										.join('\n\n')}`
-								}
-							]
-						}
-					}
-				]
+				role: 'user',
+				content: `Page: ${references[0].link}\n# ${references[0].title}\n${references
+					.map((x) => `## ${x.title}\n${x.summary}`)
+					.join('\n\n')}`
 			} satisfies ModelMessage)
 		: undefined
 
-	const stream = await retry(
+	const stream = retry(
 		() => {
 			return record(
 				'Gather Resources',
@@ -120,16 +103,17 @@ export async function ask({
 											? 'medium'
 											: 'low',
 										user: ip,
-										serviceTier: 'auto'
-									},
-									cerebras: {
-										reasoning_effort: think
-											? 'medium'
-											: 'low',
-										reasoningEffort: think
-											? 'medium'
-											: 'low'
+										serviceTier: 'auto',
+										structuredOutputs: false
 									}
+									// cerebras: {
+									// 	reasoning_effort: think
+									// 		? 'medium'
+									// 		: 'low',
+									// 	reasoningEffort: think
+									// 		? 'medium'
+									// 		: 'low'
+									// }
 								},
 								onFinish(metadata) {
 									onFinish?.(metadata as any)

@@ -1,6 +1,6 @@
 import { createOpenAI } from '@ai-sdk/openai'
 import { createGroq } from '@ai-sdk/groq'
-import { createCerebras } from '@ai-sdk/cerebras'
+// import { createCerebras } from '@ai-sdk/cerebras'
 
 const cfAccountId = process.env.CF_ACCOUNT_ID
 const aiGatewayKey = process.env.AI_GATEWAY_KEY
@@ -12,14 +12,14 @@ if (!cfAccountId) throw new Error('CF_ACCOUNT_ID is not set')
 if (!aiGatewayKey) throw new Error('AI_GATEWAY_KEY is not set')
 if (!aiGatewayID) throw new Error('AI_GATEWAY_ID is not set')
 
-const baseURL = `https://gateway.ai.cloudflare.com/v1/${cfAccountId}/${aiGatewayID}`
+// const baseURL = `https://gateway.ai.cloudflare.com/v1/${cfAccountId}/${aiGatewayID}`
 
 export const openai = createOpenAI({
 	apiKey: oaiKey
 })
 
 export const groq = createGroq({
-	baseURL: `${baseURL}/groq`,
+	// baseURL: `${baseURL}/groq`,
 	headers: {
 		'cf-aig-authorization': `Bearer ${aiGatewayKey}`
 	}

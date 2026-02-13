@@ -6,22 +6,22 @@ import {
 	API_KEY,
 	cache,
 	isDev,
-	logger,
+	log,
 	rateLimitMacro,
+	redis,
 	retry,
 	structure,
 	turnstileMacro
 } from '@arona/libs'
 
 import { AI } from './service'
-import { deduplicateReferences } from './libs'
+import { createCacheKey, deduplicateReferences } from './libs'
 import { Models, Reference } from './model'
 
 export const ai = new Elysia()
 	.model(Models)
 	.prefix('model', 'AI.')
 	.decorate({ AI })
-	.use(logger.into())
 	.use(powMacro)
 	.use(rateLimitMacro)
 	.use(turnstileMacro)
@@ -40,6 +40,27 @@ export const ai = new Elysia()
 			ip,
 			request
 		}) {
+			const key = createCacheKey({
+				message,
+				seed,
+				history,
+				think,
+				page: requestedPage
+			})
+
+			if (key)
+				try {
+					const cache = await redis.get(key)
+
+					if (cache) {
+						log(`AI Cache hit for '${key}'`)
+
+						yield cache + `\n- id:_`
+
+						return
+					}
+				} catch {}
+
 			const references: Reference[] = []
 			if (requestedPage) {
 				const pages = await retry(() =>
@@ -59,8 +80,6 @@ export const ai = new Elysia()
 					)
 			}
 
-			let logId: string | undefined
-
 			const stream = await AI.ask({
 				abortSignal: request.signal,
 				seed,
@@ -69,11 +88,8 @@ export const ai = new Elysia()
 				references,
 				ip,
 				think,
-				onFinish({ usage, response, content }) {
-					logId = response.headers?.['cf-aig-log-id']
-
+				onFinish({ usage, content }) {
 					const attributes = {
-						'ai.cf_log_id': logId,
 						'ai.question': message,
 						'ai.response': content.map((answer) =>
 							JSON.stringify(answer)
@@ -99,25 +115,35 @@ export const ai = new Elysia()
 				return
 			}
 
+			let response = ''
+
 			const streamSpan = startSpan('Stream')
-			for await (const chunk of stream) yield chunk
+			for await (const chunk of stream) {
+				response += chunk
+				yield chunk
+			}
 			streamSpan.end()
 
 			const sources = deduplicateReferences(references).toSorted(
 				(a, b) => b.score - a.score
 			)
 
-			yield '\n'
-
-			if (sources.length)
-				yield sources
+			if (sources.length) {
+				yield '\n'
+				const sourceText = yield sources
 					.map(
 						(source) =>
 							`- [${source.title}](https://elysiajs.com/${source.link})`
 					)
 					.join('\n')
 
-			yield `\n- id:${logId ?? 'UNKNOWN'}`
+				response += `\n${sourceText}`
+			}
+
+			// Intentionally not awaiting to not block the response
+			if (key) redis.set(key, response, 'EX', 10_800)
+
+			yield `\n- id:_`
 		},
 		{
 			headers: 'turnstile',
