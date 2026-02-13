@@ -5,6 +5,7 @@ export const ipMacro = new Elysia({ name: 'libs/ip' }).macro('ip', {
 		return {
 			ip:
 				headers['cf-connecting-ip'] ||
+				headers['x-real-ip'] ||
 				(server?.requestIP(request)?.address as string)
 		}
 	}

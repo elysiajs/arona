@@ -1,5 +1,5 @@
 export const CONFIG = {
-	POW_DIFFICULTY: 19,
+	POW_DIFFICULTY: 20,
 	CHALLENGE_EXPIRY_MS: 15 * 60_000
 } as const
 
