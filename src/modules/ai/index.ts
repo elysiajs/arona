@@ -130,13 +130,15 @@ export const ai = new Elysia()
 
 			if (sources.length) {
 				yield '\n'
-				const sourceText = yield sources
+
+				const sourceText = sources
 					.map(
 						(source) =>
 							`- [${source.title}](https://elysiajs.com/${source.link})`
 					)
 					.join('\n')
 
+				yield sourceText
 				response += `\n${sourceText}`
 			}
 
