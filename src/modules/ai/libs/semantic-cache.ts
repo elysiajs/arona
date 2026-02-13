@@ -59,7 +59,7 @@ export abstract class SemanticCache {
 
 			const similarity = 1 - score
 
-			if (similarity < 0.92) return null
+			if (similarity < 0.9) return null
 
 			log(
 				`Semantic Cache Hit with similarity: ${similarity.toFixed(4)} for: "${prompt}"`
