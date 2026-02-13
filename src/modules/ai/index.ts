@@ -48,23 +48,25 @@ export const ai = new Elysia()
 				page: requestedPage
 			})
 
-			if (key)
-				try {
-					const cache = await redis.get(key)
+			if(!seed) {
+				if (key)
+					try {
+						const cache = await redis.get(key)
 
-					if (cache) {
-						log(`AI Cache hit for '${key}'`)
+						if (cache) {
+							log(`AI Cache hit for '${key}'`)
 
-						yield cache
+							yield cache
 
-						return
-					}
-				} catch {}
+							return
+						}
+					} catch {}
 
-			const semanticCache = await SemanticCache.get(message)
-			if (semanticCache) {
-				yield semanticCache
-				return
+				const semanticCache = await SemanticCache.get(message)
+				if (semanticCache) {
+					yield semanticCache
+					return
+				}
 			}
 
 			const references: Reference[] = []

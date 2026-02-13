@@ -5,12 +5,12 @@ import { openai } from './ai'
 import { retry } from './retry'
 
 const fillerPattern =
-	/^(?:can you tell me|i would like to|would you kindly|i was wondering|just wondering|quick question|do you know|help me with|i want to|i need to|could you|would you|can you|tell me|show me|help me|please|hello|hey|hi|pls|plz)\s+/gi
+	/^(?:can you tell me|i would like to|would you kindly|i was wondering|just wondering|quick question|do you know|help me with|i want to|i need to|could you|would you|can you|tell me|show me|help me|please|hello|hey|hi|pls|plz|and)\s+/gi
 
 export const stripFillers = (q: string) => {
 	while (fillerPattern.test(q)) q = q.replace(fillerPattern, '')
 
-	return q.replace(/[()\[\]{}@#$%^&*!?]/g, '').trim()
+	return q.replace(/[()\[\]{}@#$%^&*!?.,:;&]/g, '').trim()
 }
 
 // Embedding is cheap and fast and maybe use multiple time in a single request,
