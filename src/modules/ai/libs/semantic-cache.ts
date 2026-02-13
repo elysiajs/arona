@@ -2,7 +2,7 @@ import { getEmbeddingBuffer, log, redis, stripFillers } from '@arona/libs'
 import { cyrb53 } from './utils'
 
 const shouldNotCache = (prompt: string) =>
-	prompt.length > 128 || !isNaN(+prompt) || prompt.includes('```')
+	prompt.length > 64 || !isNaN(+prompt) || prompt.includes('```')
 
 export abstract class SemanticCache {
 	static async get(prompt: string) {
