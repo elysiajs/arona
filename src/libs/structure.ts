@@ -19,7 +19,7 @@ const titleWeight = {
 	patterns: 0.5,
 	unknown: 0.4,
 	migrate: 0.3,
-	integration: 0.3,
+	integrations: 0.3,
 	tutorial: 0.3
 } as const
 
@@ -48,7 +48,7 @@ export const structure = async () => {
         sequence smallint NOT NUll DEFAULT 0
     );`
 
-	await sql`CREATE INDEX idx_documents_content_bm25 ON documents USING bm25 (
+	await sql`CREATE INDEX IF NOT EXISTS idx_documents_content_bm25 ON documents USING bm25 (
         link,
         (title::pdb.simple('stemmer=english')),
         (summary::pdb.simple('stemmer=english')),
@@ -56,8 +56,6 @@ export const structure = async () => {
     ) WITH (key_field='link');`.catch((error) => {
 		console.log(error)
 	})
-
-	return
 
 	await sql`CREATE INDEX IF NOT EXISTS idx_documents_link ON documents (link);`
 
