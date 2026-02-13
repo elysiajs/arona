@@ -30,29 +30,36 @@ export const structure = async () => {
 	await rootSQL.close()
 
 	await sql`CREATE EXTENSION IF NOT EXISTS vector;`
-	// await sql`DROP TABLE IF EXISTS doc_chunks;`
-	await sql`CREATE TABLE IF NOT EXISTS doc_chunks (
+	await sql`CREATE EXTENSION IF NOT EXISTS pg_search;`
+
+	await sql`CREATE TABLE IF NOT EXISTS documents (
 		link VARCHAR(255) PRIMARY KEY,
 	   	file VARCHAR(255) NOT NULL,
 		file_name VARCHAR(255) GENERATED ALWAYS AS (
 		  regexp_replace(file, '.*/|\\.[^.]+$', '', 'g')
 		) STORED,
 	    title VARCHAR(255) NOT NULL,
-	  	content TEXT NOT NULL,
-	  	summary TEXT NOT NULL,
-		weight FLOAT NOT NULL DEFAULT 0.5,
-	  	embedding VECTOR(1536) NOT NULL,
-		title_embedding VECTOR(1536) NOT NULL,
-		file_name_embedding VECTOR(1536) NOT NULL,
-		sequence smallint,
-		tsv tsvector GENERATED ALWAYS AS (to_tsvector('english', content)) STORED
-	);`
-	await sql`CREATE INDEX idx_doc_chunks_tsv ON documents USING gin(tsv);`.catch(
-		() => {}
-	)
-	await sql`CREATE INDEX idx_doc_chunks_file ON doc_chunks (file);`.catch(
-		() => {}
-	)
+	    content TEXT NOT NULL,
+	    summary TEXT NOT NULL,
+	    weight FLOAT NOT NULL DEFAULT 0.5,
+	    embedding VECTOR(1536) NOT NULL,
+	    title_embedding VECTOR(1536) NOT NULL,
+	    file_name_embedding VECTOR(1536) NOT NULL,
+        sequence smallint NOT NUll DEFAULT 0
+    );`
+
+	await sql`CREATE INDEX idx_documents_content_bm25 ON documents USING bm25 (
+        link,
+        (title::pdb.simple('stemmer=english')),
+        (summary::pdb.simple('stemmer=english')),
+        file_name
+    ) WITH (key_field='link');`.catch((error) => {
+		console.log(error)
+	})
+
+	return
+
+	await sql`CREATE INDEX IF NOT EXISTS idx_documents_link ON documents (link);`
 
 	log('Database structure setup completed')
 
@@ -135,7 +142,7 @@ export const structure = async () => {
 		totalOps++
 
 		const currentFiles = await sql.unsafe<(Chunk & { link: string })[]>(
-			`SELECT file, content, link FROM doc_chunks WHERE file IN (${chunk.map((c) => `'${c.file}'`).join(', ')})`
+			`SELECT file, content, link FROM documents WHERE file IN (${chunk.map((c) => `'${c.file}'`).join(', ')})`
 		)
 
 		function format(x: string) {
@@ -342,7 +349,7 @@ export const structure = async () => {
 
 				if (!values.length) return
 
-				const query = `INSERT INTO doc_chunks (link, file, title, content, weight, embedding, title_embedding, file_name_embedding, sequence, summary)
+				const query = `INSERT INTO documents (link, file, title, content, weight, embedding, title_embedding, file_name_embedding, sequence, summary)
 					VALUES ${sqlValues}
 					ON CONFLICT (link)
 					DO UPDATE SET
@@ -376,7 +383,7 @@ export const structure = async () => {
 				toRemove.map((a) => a.link)
 			)
 
-			const query = `DELETE FROM doc_chunks WHERE link IN (${toRemove
+			const query = `DELETE FROM documents WHERE link IN (${toRemove
 				.map((c) => `'${c.link}'`)
 				.join(', ')});`
 

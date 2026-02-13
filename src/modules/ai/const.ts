@@ -17,7 +17,7 @@ export const SQL = {
 	        0.125  * d.weight * -1
 	      )
 	    ) AS score
-	  FROM doc_chunks d, q
+	  FROM documents d, q
 	  ORDER BY d.file, score DESC
 	),
 	filtered AS (
@@ -36,7 +36,7 @@ export const SQL = {
 		dc.sequence,
 		f.score as score
 	  FROM filtered f
-	  JOIN doc_chunks dc
+	  JOIN documents dc
 		ON dc.file = f.file
 		AND dc.sequence BETWEEN f.sequence AND f.sequence + 1
 	  ORDER BY score, sequence

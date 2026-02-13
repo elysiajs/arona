@@ -1,5 +1,4 @@
 import {
-	embed,
 	ModelMessage,
 	stepCountIs,
 	streamText,
@@ -14,15 +13,7 @@ import {
 	createSearchTool,
 	tableOfContentsTool
 } from './libs/tool'
-import {
-	cache,
-	getEmbedding,
-	instruction,
-	model,
-	openai,
-	retry,
-	sql
-} from '@arona/libs'
+import { getEmbedding, instruction, model, retry, sql } from '@arona/libs'
 
 import { compressHistory } from './libs'
 import type { History, Reference } from './model'
@@ -150,13 +141,13 @@ export async function readPage(link: string): Promise<Reference | Reference[]> {
 	if (link.includes('#'))
 		return sql<
 			Reference[]
-		>`SELECT title, summary, link FROM doc_chunks WHERE link = ${link} LIMIT 1`.then(
+		>`SELECT title, summary, link FROM documents WHERE link = ${link} LIMIT 1`.then(
 			(x) => (x[0] ? Object.assign(x[0], { score: 1 }) : [])
 		)
 
 	return sql<
 		Reference[]
-	>`SELECT title, summary, link FROM doc_chunks WHERE link LIKE ${link + '%'}`.then(
+	>`SELECT title, summary, link FROM documents WHERE link LIKE ${link + '%'}`.then(
 		(x) => x.map((r) => Object.assign(r, { score: 1 }))
 	)
 }
@@ -170,44 +161,43 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 	if (!value) return []
 
 	const references = await sql<Reference[]>`WITH raw AS (
-	  SELECT
-	    d.file,
-	    d.link,
-	    d.title,
-	    d.sequence,
-	    d.summary,
-	    d.weight,
-	    ts_rank(d.tsv, query) AS r
-	  FROM
-	    doc_chunks d,
-	    plainto_tsquery('english', ${value}) query
-	  WHERE
-	    d.tsv @@ query
+	SELECT
+	  file,
+	  link,
+	  title,
+	  sequence,
+	  summary,
+	  weight,
+	  paradedb.score(link) AS r
+	FROM
+   	  documents d
+	WHERE
+	  link @@@ ${'summary:' + value}
 	),
 	normalized AS (
-	  SELECT
-	    *,
-	    r / NULLIF(
-	      MAX(r) OVER (),
-	      0
-	    ) AS r_norm
-	  FROM
-	    raw
-	),
-	filtered AS (
-	  SELECT
-	    DISTINCT ON (file) file,
-	    link,
-	    title,
-	    sequence,
-	    summary,
-	    (0.775 * r_norm + 0.275 * weight) AS score
-	  FROM
-	    normalized
-	  ORDER BY
-	    file,
-	    score DESC
-	),
+      SELECT
+      	*,
+        r / NULLIF(MAX(r) OVER (), 0) AS r_norm
+      FROM
+        raw
+    ),
+    filtered AS (
+      SELECT
+        DISTINCT ON (file) file,
+        link,
+        title,
+        sequence,
+        summary,
+        (0.775 * r_norm + 0.275 * weight) AS score
+      FROM
+    	normalized
+      WHERE
+		(0.775 * r_norm + 0.275 * weight) >= 0.6
+      ORDER BY
+    	file,
+        score DESC
+      LIMIT 10
+    ),
 	chunk AS (
 	  SELECT
 	    f.file,
@@ -218,7 +208,7 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 	    f.score as score
 	  FROM
 	    filtered f
-	    JOIN doc_chunks dc ON dc.file = f.file
+	    JOIN documents dc ON dc.file = f.file
 	    AND dc.sequence BETWEEN f.sequence
 	    AND f.sequence + 1
 	  ORDER BY
@@ -232,8 +222,6 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 	  c.score
 	FROM
 	  chunk c
-	WHERE
-	  c.score > 0.725
 	GROUP BY
 	  c.file,
 	  c.title,

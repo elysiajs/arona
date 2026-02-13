@@ -40,6 +40,9 @@ export const ai = new Elysia()
 			ip,
 			request
 		}) {
+			yield 'Elysia chan is busy packing her things to a library... Please visit her later in a while!'
+			return
+
 			const key = createCacheKey({
 				message,
 				seed,
