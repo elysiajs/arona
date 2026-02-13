@@ -37,8 +37,8 @@ export abstract class SemanticCache {
 					'2',
 					'RETURN',
 					'3',
-					'response',
-					'score'
+					'score',
+					'response'
 				)
 				.catch(() => null)
 
@@ -46,12 +46,17 @@ export abstract class SemanticCache {
 
 			let [, , [, stringifiedScore, , cached]] = response
 
-			console.log("SEMANTIC CACHE RESPONSE:", {
-				stringifiedScore,
-				cached
-			})
+			let score = parseFloat(stringifiedScore)
 
-			const score = parseFloat(stringifiedScore)
+			// score and cached are swapped somehow?
+			if (isNaN(score)) {
+				score = parseFloat(cached)
+				cached = stringifiedScore
+			}
+
+			// Something went wrong, skip the thing
+			if (isNaN(score)) return null
+
 			const similarity = 1 - score
 
 			if (similarity < 0.92) return null
@@ -62,7 +67,7 @@ export abstract class SemanticCache {
 
 			return cached
 		} catch (error) {
-			console.log("ERROR Semantic Cache error")
+			console.log('ERROR Semantic Cache error')
 			console.log(error)
 
 			return
