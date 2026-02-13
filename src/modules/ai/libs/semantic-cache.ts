@@ -44,7 +44,12 @@ export abstract class SemanticCache {
 
 			if (!response || response.length < 3) return null
 
-			const [, , [, stringifiedScore, , cached]] = response
+			let [, , [, stringifiedScore, , cached]] = response
+
+			console.log("SEMANTIC CACHE RESPONSE:", {
+				stringifiedScore,
+				cached
+			})
 
 			const score = parseFloat(stringifiedScore)
 			const similarity = 1 - score
