@@ -191,7 +191,7 @@ const reIndexSecret = process.env.REINDEX_SECRET
 if (reIndexWebhookEndpoint && reIndexSecret)
 	ai.patch(
 		reIndexWebhookEndpoint,
-		async function* ({ headers, status }) {
+		async function* () {
 			yield 'Indexing...'
 
 			await structure()

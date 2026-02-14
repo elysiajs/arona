@@ -23,7 +23,13 @@ const titleWeight = {
 	tutorial: 0.3
 } as const
 
+let inProcess = false
+
 export const structure = async () => {
+	if (inProcess) return
+
+	inProcess = true
+
 	const rootSQL = new SQL(dbRoot)
 	await sql`CREATE DATABASE ${sql(dbName)};`.catch(() => {})
 	log(`Created Database "${dbName}"`)
@@ -423,5 +429,7 @@ export const structure = async () => {
 	log('Data insertion completed')
 
 	if (process.env.NODE_ENV === 'production')
-		rmdir('docs', { recursive: true })
+		await rmdir('docs', { recursive: true })
+
+	inProcess = false
 }
