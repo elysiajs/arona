@@ -106,7 +106,7 @@ export abstract class SemanticCache {
 				})
 			})
 
-			await redis.expire(key, 10_800)
+			await redis.expire(key, 14_400)
 
 			log('Semantic Cache Set for:', prompt)
 
