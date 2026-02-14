@@ -26,6 +26,7 @@ export const groq = createGroq({
 })
 
 export const model = groq('openai/gpt-oss-120b')
+export const smallModel = groq('llama-3.1-8b-instant')
 
 // export const cerebras = createCerebras({
 // 	baseURL: `${baseURL}/cerebras`,

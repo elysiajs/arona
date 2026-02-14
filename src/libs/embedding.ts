@@ -1,11 +1,11 @@
-import { embed } from 'ai'
+import { embed, pruneMessages } from 'ai'
 import { LRUCache } from 'lru-cache'
 
 import { openai } from './ai'
 import { retry } from './retry'
 
 const fillerPattern =
-	/^(?:can you tell me|i would like to|would you kindly|i was wondering|just wondering|quick question|do you know|help me with|i want to|i need to|could you|would you|can you|tell me|show me|help me|please|hello|hey|hi|pls|plz|and)\s+/gi
+	/^(?:can you tell me|i would like to|would you kindly|i was wondering|just wondering|quick question|do you know|help me with|i want to|i need to|could you|would you|can you|tell me|show me|help me|please|hello|hey|hi|pls|plz|and|to my codebase|for my codebase)\s+/gi
 
 export const stripFillers = (q: string) => {
 	q = q.toLowerCase()
@@ -38,6 +38,9 @@ interface GetEmbeddingOptions {
 	skipFiller?: boolean
 }
 
+type EmbeddingModelV3Embedding = Awaited<ReturnType<typeof embed>>['embedding']
+const pendingCache = new Map<string, Promise<EmbeddingModelV3Embedding>>()
+
 export const getEmbedding = async (
 	prompt: string,
 	{ ttl = 32_400, skipFiller = false }: GetEmbeddingOptions = {}
@@ -47,13 +50,18 @@ export const getEmbedding = async (
 	if (!skipFiller) prompt = stripFillers(prompt)
 
 	if (!shouldSkip && cache.has(prompt)) return cache.get(prompt)!
+	if (pendingCache.has(prompt)) return pendingCache.get(prompt)!
 
-	const { embedding } = await retry(() =>
+	const pending = retry(() =>
 		embed({
 			model: openai.embeddingModel('text-embedding-3-small'),
 			value: prompt
 		})
-	)
+	).then((v) => v.embedding)
+
+	pendingCache.set(prompt, pending)
+
+	const embedding = await pending
 
 	if (!shouldSkip)
 		cache.set(prompt, embedding, {

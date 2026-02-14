@@ -77,6 +77,10 @@ export function ask({
 								) as any,
 								stopWhen: stepCountIs(think ? 9 : 5),
 								seed,
+								topP: 0.7,
+								topK: 55,
+								presencePenalty: 0.4,
+								maxOutputTokens: 1408,
 								messages: [
 									{
 										role: 'system',

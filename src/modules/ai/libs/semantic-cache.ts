@@ -1,8 +1,23 @@
-import { getEmbeddingBuffer, log, redis, stripFillers } from '@arona/libs'
+import { generateText } from 'ai'
+import {
+	getEmbeddingBuffer,
+	log,
+	model,
+	smallModel,
+	redis,
+	stripFillers
+} from '@arona/libs'
 import { cyrb53 } from './utils'
 
 const shouldNotCache = (prompt: string) =>
-	prompt.length > 64 || !isNaN(+prompt) || prompt.includes('```')
+	prompt.length > 72 || !isNaN(+prompt) || prompt.includes('```')
+
+const normalizePromptInstruction = `Reduce the user query to its canonical search intent. Output ONLY the normalized form. No explanation.
+- Remove all filler words, pleasantries
+- Reduce to core topic + action
+- Do not remove word "Elysia"
+- Use consistent terminology
+- Keep it under 12 words`
 
 export abstract class SemanticCache {
 	static async get(prompt: string) {
@@ -59,7 +74,7 @@ export abstract class SemanticCache {
 
 			const similarity = 1 - score
 
-			if (similarity < 0.9) return null
+			if (similarity < 0.91) return null
 
 			log(
 				`Semantic Cache Hit with similarity: ${similarity.toFixed(4)} for: "${prompt}"`
@@ -96,6 +111,32 @@ export abstract class SemanticCache {
 			log('Semantic Cache Set for:', prompt)
 
 			return result
+		} catch {
+			return
+		}
+	}
+
+	static async normalize(prompt: string) {
+		if (
+			prompt.length < 12 ||
+			prompt.length > 192 ||
+			!isNaN(+prompt) ||
+			prompt.includes('```') ||
+			!prompt.includes(' ')
+		)
+			return
+
+		try {
+			const { text } = await generateText({
+				model: smallModel,
+				system: normalizePromptInstruction,
+				prompt,
+				temperature: 0,
+				topP: 1,
+				maxOutputTokens: 192
+			})
+
+			return text.trim()
 		} catch {
 			return
 		}

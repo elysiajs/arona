@@ -7,6 +7,7 @@ import {
 	cache,
 	isDev,
 	log,
+	raceFirstTruthy,
 	rateLimitMacro,
 	redis,
 	retry,
@@ -50,26 +51,43 @@ export const ai = new Elysia()
 				page: requestedPage
 			})
 
-			if(!seed) {
-				if (key)
-					try {
-						const cache = await redis.get(key)
+			let normalized: Promise<string | undefined> | undefined
 
-						if (cache) {
-							log(`AI Cache hit for '${key}'`)
+			if (!seed || (seed && Math.random() <= 0.1)) {
+				if (key) {
+					const cache = await redis.get(key).catch(() => {})
 
-							yield cache
+					if (cache) {
+						log(`AI Cache hit for '${key}'`)
 
-							return
-						}
-					} catch {}
+						yield cache
+						return
+					}
+				}
 
-				const semanticCache = await SemanticCache.get(message)
-				if (semanticCache) {
-					yield semanticCache
+				let done = false
+
+				const cache = await raceFirstTruthy(
+					SemanticCache.get(message),
+					async () => {
+						normalized = SemanticCache.normalize(message)
+
+						const key = await normalized
+						if (!key || done) return
+
+						return SemanticCache.get(key)
+					}
+				)
+
+				done = true
+
+				if (cache) {
+					yield cache
 					return
 				}
 			}
+
+			if (!normalized) normalized = SemanticCache.normalize(message)
 
 			const references: Reference[] = []
 			if (requestedPage) {
@@ -151,7 +169,7 @@ export const ai = new Elysia()
 				response += `\n${sourceText}`
 			}
 
-			// Intentionally not awaiting to not block the response
+			// Intentionally no await the rest to not block the response
 			if (key)
 				redis.set(
 					key,
@@ -161,10 +179,12 @@ export const ai = new Elysia()
 					message.length > 256 ? 1_800 : 10_800
 				)
 
-			SemanticCache.set(message, response)
+			normalized.then((value) => {
+				if (value) SemanticCache.set(value, response)
+			})
 		},
 		{
-			headers: 'turnstile',
+			// headers: 'turnstile',
 			body: 'AI.Ask',
 			parse: 'json',
 			turnstile: true,
