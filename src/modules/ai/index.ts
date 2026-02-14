@@ -184,7 +184,7 @@ export const ai = new Elysia()
 			})
 		},
 		{
-			// headers: 'turnstile',
+			headers: 'turnstile',
 			body: 'AI.Ask',
 			parse: 'json',
 			turnstile: true,
