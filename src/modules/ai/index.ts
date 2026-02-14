@@ -26,13 +26,6 @@ export const ai = new Elysia()
 	.use(powMacro)
 	.use(rateLimitMacro)
 	.use(turnstileMacro)
-	.patch('/database/index', async ({ headers, status }) => {
-		if (headers['x-api-key'] !== API_KEY) return status(404)
-
-		await structure()
-
-		return 'ok'
-	})
 	.post(
 		'/ask',
 		async function* ({
@@ -189,6 +182,27 @@ export const ai = new Elysia()
 			parse: 'json',
 			turnstile: true,
 			pow: !isDev as true
+		}
+	)
+
+const reIndexWebhookEndpoint = process.env.REINDEX_ENDPOINT
+const reIndexSecret = process.env.REINDEX_SECRET
+
+if (reIndexWebhookEndpoint && reIndexSecret)
+	ai.patch(
+		reIndexWebhookEndpoint,
+		async function* ({ headers, status }) {
+			yield 'Indexing...'
+
+			await structure()
+
+			yield 'Done'
+		},
+		{
+			beforeHandle({ headers, status }) {
+				if (headers['reindex_secret'] !== reIndexSecret)
+					return status(404, 'NOT_FOUND')
+			}
 		}
 	)
 
