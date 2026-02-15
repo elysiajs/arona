@@ -5,7 +5,8 @@ import {
 	model,
 	smallModel,
 	redis,
-	stripFillers
+	stripFillers,
+	retry
 } from '@arona/libs'
 import { cyrb53 } from './utils'
 
@@ -127,14 +128,26 @@ export abstract class SemanticCache {
 			return
 
 		try {
-			const { text } = await generateText({
-				model: smallModel,
-				system: normalizePromptInstruction,
-				prompt,
-				temperature: 0,
-				topP: 1,
-				maxOutputTokens: 192
-			})
+			const { text } = await retry(
+				() =>
+					generateText({
+						model: smallModel,
+						system: normalizePromptInstruction,
+						prompt,
+						temperature: 0,
+						topP: 1,
+						maxOutputTokens: 192,
+						providerOptions: {
+							groq: {
+								reasoningEffort: 'none',
+								serviceTier: 'auto',
+								structuredOutputs: false
+							}
+						}
+					}),
+				3,
+				500
+			)
 
 			return text.trim()
 		} catch {
