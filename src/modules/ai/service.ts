@@ -313,7 +313,7 @@ export abstract class VolatileHistoryCache {
 	// burstCache
 	static cache = new LRUCache<number, string>({
 		max: 5000,
-		ttl: 30 * 1000 // 30 seconds
+		ttl: 5
 	})
 
 	static hash = ({ history, message, think }: Models['ask']) =>
