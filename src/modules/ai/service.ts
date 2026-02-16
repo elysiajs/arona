@@ -405,7 +405,12 @@ export const AI = {
 	ask,
 	Checksum,
 	getCache,
-	FallbackCache: new FallbackCache(),
+	FallbackCache: new FallbackCache({
+		cache: {
+			max: 1500,
+			ttl: 5 * 1000
+		}
+	}),
 	NoHistoryWithSeedCache: new NoHistoryWithSeedCache({
 		cache: {
 			ttl: 4 * 60 * 60 * 1000, // 4 hour
