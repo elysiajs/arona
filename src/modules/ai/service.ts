@@ -322,15 +322,38 @@ export abstract class VolatileHistoryCache {
 			`${history?.map((x) => x.content).join('|')}|${message}|${think ? '1' : '0'}`
 		)
 
-	static get = (Models: Models['ask']) => this.cache.get(this.hash(Models))
-	static has = (Models: Models['ask']) => this.cache.has(this.hash(Models))
-	static set = (Models: Models['ask'], response: string) =>
-		this.cache.set(this.hash(Models), response)
+	static get = (key: Models['ask']) => this.cache.get(this.hash(key))
+	static has = (key: Models['ask']) => this.cache.has(this.hash(key))
+	static set = (key: Models['ask'], value: string) =>
+		this.cache.set(this.hash(key), value)
+}
+
+interface NoHistoryWithSeed {
+	message: string
+	seed: number
+}
+
+export abstract class NoHistoryWithSeedCache {
+	// burstCache
+	static cache = new LRUCache<number, string>({
+		max: 5000,
+		ttl: 7
+	})
+
+	// check regardless of seed because ttl is very short
+	static hash = ({ message, seed }: NoHistoryWithSeed) =>
+		cyrb53(`${message}|${seed}`)
+
+	static get = (key: NoHistoryWithSeed) => this.cache.get(this.hash(key))
+	static has = (key: NoHistoryWithSeed) => this.cache.has(this.hash(key))
+	static set = (key: NoHistoryWithSeed, value: string) =>
+		this.cache.set(this.hash(key), value)
 }
 
 export const AI = {
 	ask,
 	Checksum,
+	NoHistoryWithSeedCache,
 	readPage,
 	search,
 	VolatileHistoryCache,

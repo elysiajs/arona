@@ -46,7 +46,7 @@ export const ai = new Elysia()
 
 			let normalized: Promise<string | undefined> | undefined
 
-			if (!seed || (seed && Math.random() <= 0.1)) {
+			if (!seed) {
 				if (key) {
 					const cache = await redis.get(key).catch(() => {})
 
@@ -76,6 +76,13 @@ export const ai = new Elysia()
 
 				if (cache) {
 					yield AI.withMetadata(cache)
+					return
+				}
+			} else {
+				if (AI.NoHistoryWithSeedCache.has({ message, seed })) {
+					yield AI.withMetadata(
+						AI.NoHistoryWithSeedCache.get({ message, seed })!
+					)
 					return
 				}
 			}
@@ -177,6 +184,8 @@ export const ai = new Elysia()
 				)
 
 			if (history?.length) AI.VolatileHistoryCache.set(body, response)
+			else if (seed)
+				AI.NoHistoryWithSeedCache.set({ message, seed }, response)
 
 			normalized.then((value) => {
 				if (value) SemanticCache.set(value, response)
