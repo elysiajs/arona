@@ -162,6 +162,8 @@ export const ai = new Elysia()
 				response += `\n${sourceText}`
 			}
 
+			response = response.trimEnd()
+
 			yield AI.withMetadata('')
 
 			// Intentionally no await the rest to not block the response
