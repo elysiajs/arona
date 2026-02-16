@@ -1,4 +1,5 @@
 export * from './ai'
+export { BurstCache } from './burst-cache'
 export { cache } from './cache'
 export { sql } from './database'
 export { getEmbedding, getEmbeddingBuffer, stripFillers } from './embedding'

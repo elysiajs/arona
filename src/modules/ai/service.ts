@@ -1,27 +1,36 @@
 import { timingSafeEqual } from 'crypto'
-import { LRUCache } from 'lru-cache'
 
 import {
-	lastAssistantMessageIsCompleteWithToolCalls,
 	ModelMessage,
 	stepCountIs,
 	streamText,
 	type StreamTextOnFinishCallback
 } from 'ai'
+import { LRUCache } from 'lru-cache'
 
 import { record, setAttributes } from '@elysiajs/opentelemetry'
 
+import {
+	BurstCache,
+	getEmbedding,
+	instruction,
+	log,
+	model,
+	raceFirstTruthy,
+	redis,
+	retry,
+	sql
+} from '@arona/libs'
 import {
 	createHistoryTool,
 	createPageTool,
 	createSearchTool,
 	tableOfContentsTool
 } from './libs/tool'
-import { getEmbedding, instruction, model, retry, sql } from '@arona/libs'
 
-import { compressHistory, cyrb53 } from './libs'
-import type { History, Models, Reference } from './model'
+import { compressHistory, createCacheKey, cyrb53, SemanticCache } from './libs'
 import { SQL } from './const'
+import type { History, Models, Reference } from './model'
 
 interface AskParams {
 	abortSignal: AbortSignal
@@ -109,8 +118,7 @@ export function ask({
 											? 'medium'
 											: 'low',
 										user: ip,
-										serviceTier: 'auto',
-										structuredOutputs: false
+										serviceTier: 'auto'
 									}
 									// cerebras: {
 									// 	reasoning_effort: think
@@ -257,8 +265,8 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 	return references
 }
 
-const AI_CHECKSUM_SECRET = process.env.AI_CHECKSUM_SECRET
-if (!AI_CHECKSUM_SECRET) throw new Error('AI_CHECKSUM_SECRET is not set')
+const aiChecksumSecret = process.env.AI_CHECKSUM_SECRET
+if (!aiChecksumSecret) throw new Error('AI_CHECKSUM_SECRET is not set')
 
 export abstract class Checksum {
 	static cache = {
@@ -280,7 +288,7 @@ export abstract class Checksum {
 		if (this.cache.fromContent.has(content))
 			return this.cache.fromContent.get(content)!
 
-		const hash = new Bun.CryptoHasher('sha256', AI_CHECKSUM_SECRET)
+		const hash = new Bun.CryptoHasher('sha256', aiChecksumSecret)
 			.update(content)
 			.digest('hex')
 
@@ -312,23 +320,12 @@ export function withMetadata(content: string) {
 	return `${content}\n---Elysia-Metadata---\nchecksum:${AI.Checksum.generate(content)}`
 }
 
-export abstract class VolatileHistoryCache {
-	// burstCache
-	static cache = new LRUCache<number, string>({
-		max: 5000,
-		ttl: 7
-	})
-
+export class VolatileHistoryCache extends BurstCache<Models['ask'], string> {
 	// check regardless of seed because ttl is very short
-	static hash = ({ history, message, think }: Models['ask']) =>
+	hash = ({ history, message, think }: Models['ask']) =>
 		cyrb53(
 			`${history?.map((x) => x.content).join('|')}|${message}|${think ? '1' : '0'}`
 		)
-
-	static get = (key: Models['ask']) => this.cache.get(this.hash(key))
-	static has = (key: Models['ask']) => this.cache.has(this.hash(key))
-	static set = (key: Models['ask'], value: string) =>
-		this.cache.set(this.hash(key), value)
 }
 
 interface NoHistoryWithSeed {
@@ -336,29 +333,82 @@ interface NoHistoryWithSeed {
 	seed: number
 }
 
-export abstract class NoHistoryWithSeedCache {
-	// burstCache
-	static cache = new LRUCache<number, string>({
-		max: 5000,
-		ttl: 7
-	})
-
-	// check regardless of seed because ttl is very short
-	static hash = ({ message, seed }: NoHistoryWithSeed) =>
+class NoHistoryWithSeedCache extends BurstCache<NoHistoryWithSeed, string> {
+	hash = ({ message, seed }: NoHistoryWithSeed) =>
 		cyrb53(`${message}|${seed}`)
+}
 
-	static get = (key: NoHistoryWithSeed) => this.cache.get(this.hash(key))
-	static has = (key: NoHistoryWithSeed) => this.cache.has(this.hash(key))
-	static set = (key: NoHistoryWithSeed, value: string) =>
-		this.cache.set(this.hash(key), value)
+export async function getCache(body: Models['ask']) {
+	const { seed, message, history, think, reference } = body
+
+	if (!seed) {
+		const key = createCacheKey({
+			message,
+			seed,
+			history,
+			think,
+			page: reference
+		})
+
+		if (key) {
+			const cache = await redis.get(key).catch(() => {})
+
+			if (cache) {
+				log(`AI Cache hit for '${key}'`)
+
+				return cache
+			}
+		}
+
+		let done = false
+
+		const cache = await raceFirstTruthy(
+			SemanticCache.get(message),
+			async () => {
+				const key = await SemanticCache.normalize(message)
+				if (!key || done) return
+
+				return SemanticCache.get(key)
+			}
+		)
+
+		done = true
+
+		if (cache) return cache
+	}
+
+	if (history?.length) {
+		if (AI.VolatileHistoryCache.has(body))
+			return AI.VolatileHistoryCache.get(body)!
+
+		if (AI.VolatileHistoryCache.pending.has(body)) {
+			const cache = await AI.VolatileHistoryCache.pending.get(body)
+
+			if (cache) return cache
+		} else AI.VolatileHistoryCache.pending.block(body)
+	} else if (seed) {
+		if (AI.NoHistoryWithSeedCache.has({ message, seed })) {
+			return AI.NoHistoryWithSeedCache.get({ message, seed })!
+		}
+
+		if (AI.NoHistoryWithSeedCache.pending.has({ message, seed })) {
+			const cache = await AI.NoHistoryWithSeedCache.pending.get({
+				message,
+				seed
+			})
+
+			if (cache) return cache
+		} else AI.NoHistoryWithSeedCache.pending.block({ message, seed })
+	}
 }
 
 export const AI = {
 	ask,
 	Checksum,
-	NoHistoryWithSeedCache,
+	getCache,
+	NoHistoryWithSeedCache: new NoHistoryWithSeedCache(),
 	readPage,
 	search,
-	VolatileHistoryCache,
+	VolatileHistoryCache: new VolatileHistoryCache(),
 	withMetadata
 } as const

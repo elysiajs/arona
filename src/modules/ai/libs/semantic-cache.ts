@@ -8,6 +8,7 @@ import {
 	retry
 } from '@arona/libs'
 import { cyrb53 } from './utils'
+import { LRUCache } from 'lru-cache/raw'
 
 const shouldNotCache = (prompt: string) =>
 	prompt.length > 72 || !isNaN(+prompt) || prompt.includes('```')
@@ -20,6 +21,12 @@ const normalizePromptInstruction = `Reduce the user query to its canonical searc
 - Keep it under 12 words`
 
 export abstract class SemanticCache {
+	// burst cache
+	static normalizeCache = new LRUCache<string, string>({
+		max: 3750,
+		ttl: 3 * 60
+	})
+
 	static async get(prompt: string) {
 		if (shouldNotCache(prompt)) return null
 
@@ -126,8 +133,11 @@ export abstract class SemanticCache {
 		)
 			return
 
+		if (this.normalizeCache.has(prompt))
+			return this.normalizeCache.get(prompt)!
+
 		try {
-			const { text } = await retry(
+			let { text } = await retry(
 				() =>
 					generateText({
 						model: smallModel,
@@ -138,7 +148,7 @@ export abstract class SemanticCache {
 						maxOutputTokens: 192,
 						providerOptions: {
 							groq: {
-								reasoningEffort: 'none',
+								reasoningEffort: 'low',
 								serviceTier: 'auto',
 								structuredOutputs: false
 							}
@@ -148,7 +158,9 @@ export abstract class SemanticCache {
 				500
 			)
 
-			return text.trim()
+			this.normalizeCache.set(prompt, (text = text.trim()))
+
+			return text
 		} catch {
 			return
 		}

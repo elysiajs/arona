@@ -1,4 +1,4 @@
-import { Elysia, t } from 'elysia'
+import { Elysia } from 'elysia'
 import { startSpan } from '@elysiajs/opentelemetry'
 
 import { powMacro } from '@arona/modules/pow'
@@ -6,8 +6,6 @@ import {
 	API_KEY,
 	cache,
 	isDev,
-	log,
-	raceFirstTruthy,
 	rateLimitMacro,
 	redis,
 	retry,
@@ -17,7 +15,7 @@ import {
 
 import { AI } from './service'
 import { createCacheKey, deduplicateReferences, SemanticCache } from './libs'
-import { Models, Reference } from './model'
+import { Models, type Reference } from './model'
 
 export const ai = new Elysia()
 	.model(Models)
@@ -36,58 +34,12 @@ export const ai = new Elysia()
 			request
 		}) {
 			// yield 'Elysia chan is busy packing her things to a library... Please visit her later in a while!'
-			const key = createCacheKey({
-				message,
-				seed,
-				history,
-				think,
-				page: requestedPage
-			})
 
-			let normalized: Promise<string | undefined> | undefined
-
-			if (!seed) {
-				if (key) {
-					const cache = await redis.get(key).catch(() => {})
-
-					if (cache) {
-						log(`AI Cache hit for '${key}'`)
-
-						yield AI.withMetadata(cache)
-						return
-					}
-				}
-
-				let done = false
-
-				const cache = await raceFirstTruthy(
-					SemanticCache.get(message),
-					async () => {
-						normalized = SemanticCache.normalize(message)
-
-						const key = await normalized
-						if (!key || done) return
-
-						return SemanticCache.get(key)
-					}
-				)
-
-				done = true
-
-				if (cache) {
-					yield AI.withMetadata(cache)
-					return
-				}
-			} else {
-				if (AI.NoHistoryWithSeedCache.has({ message, seed })) {
-					yield AI.withMetadata(
-						AI.NoHistoryWithSeedCache.get({ message, seed })!
-					)
-					return
-				}
+			const responseCache = await AI.getCache(body)
+			if (responseCache) {
+				yield AI.withMetadata(responseCache)
+				return
 			}
-
-			if (!normalized) normalized = SemanticCache.normalize(message)
 
 			const references: Reference[] = []
 			if (requestedPage) {
@@ -174,6 +126,14 @@ export const ai = new Elysia()
 			yield AI.withMetadata('')
 
 			// Intentionally no await the rest to not block the response
+			const key = createCacheKey({
+				message,
+				seed,
+				history,
+				think,
+				page: requestedPage
+			})
+
 			if (key)
 				redis.set(
 					key,
@@ -183,12 +143,19 @@ export const ai = new Elysia()
 					message.length > 256 ? 1_800 : 10_800
 				)
 
-			if (history?.length) AI.VolatileHistoryCache.set(body, response)
-			else if (seed)
+			if (history?.length) {
+				AI.VolatileHistoryCache.set(body, response)
+				AI.VolatileHistoryCache.pending.resolve(body, response)
+			} else if (seed) {
 				AI.NoHistoryWithSeedCache.set({ message, seed }, response)
+				AI.NoHistoryWithSeedCache.pending.resolve(
+					{ message, seed },
+					response
+				)
+			}
 
-			normalized.then((value) => {
-				if (value) SemanticCache.set(value, response)
+			SemanticCache.normalize(message).then((normalized) => {
+				if (normalized) SemanticCache.set(normalized, response)
 			})
 		},
 		{
@@ -199,8 +166,8 @@ export const ai = new Elysia()
 			beforeHandle({ body, status, AI }) {
 				if (!body.history) return
 
-				if (body.history?.length > 13)
-					body.history = body.history.slice(-13)
+				if (body.history?.length > 8)
+					body.history = body.history.slice(-8)
 
 				for (const { content, checksum, role } of body.history)
 					if (
@@ -211,9 +178,6 @@ export const ai = new Elysia()
 							422,
 							'Invalid history. Please start a new conversation.'
 						)
-
-				if (AI.VolatileHistoryCache.has(body))
-					return AI.withMetadata(AI.VolatileHistoryCache.get(body)!)
 			}
 		}
 	)
