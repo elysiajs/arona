@@ -143,16 +143,11 @@ export const ai = new Elysia()
 					message.length > 256 ? 1_800 : 10_800
 				)
 
-			if (history?.length) {
-				AI.VolatileHistoryCache.set(body, response)
-				AI.VolatileHistoryCache.pending.resolve(body, response)
-			} else if (seed) {
+			if (history?.length) AI.VolatileHistoryCache.set(body, response)
+			else if (seed)
 				AI.NoHistoryWithSeedCache.set({ message, seed }, response)
-				AI.NoHistoryWithSeedCache.pending.resolve(
-					{ message, seed },
-					response
-				)
-			}
+
+			AI.FallbackCache.set(body, response)
 
 			SemanticCache.normalize(message).then((normalized) => {
 				if (normalized) SemanticCache.set(normalized, response)

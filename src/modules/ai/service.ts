@@ -338,6 +338,19 @@ class NoHistoryWithSeedCache extends BurstCache<NoHistoryWithSeed, string> {
 		cyrb53(`${message}|${seed}`)
 }
 
+class FallbackCache extends BurstCache<Models['ask'], string> {
+	// no seed
+	hash = ({ message, history, reference, think }: Models['ask']) =>
+		cyrb53(
+			`${message}:${
+				history
+					?.filter((x) => x.content)
+					?.map((x) => x.content)
+					.join('|') ?? ''
+			}:${reference ?? ''}:${think ? '1' : '0'}`
+		)
+}
+
 export async function getCache(body: Models['ask']) {
 	const { seed, message, history, think, reference } = body
 
@@ -380,35 +393,32 @@ export async function getCache(body: Models['ask']) {
 	if (history?.length) {
 		if (AI.VolatileHistoryCache.has(body))
 			return AI.VolatileHistoryCache.get(body)!
-
-		if (AI.VolatileHistoryCache.pending.has(body)) {
-			const cache = await AI.VolatileHistoryCache.pending.get(body)
-
-			if (cache) return cache
-		} else AI.VolatileHistoryCache.pending.block(body)
 	} else if (seed) {
-		if (AI.NoHistoryWithSeedCache.has({ message, seed })) {
+		if (AI.NoHistoryWithSeedCache.has({ message, seed }))
 			return AI.NoHistoryWithSeedCache.get({ message, seed })!
-		}
-
-		if (AI.NoHistoryWithSeedCache.pending.has({ message, seed })) {
-			const cache = await AI.NoHistoryWithSeedCache.pending.get({
-				message,
-				seed
-			})
-
-			if (cache) return cache
-		} else AI.NoHistoryWithSeedCache.pending.block({ message, seed })
 	}
+
+	if (AI.FallbackCache.has(body)) return AI.FallbackCache.get(body)!
 }
 
 export const AI = {
 	ask,
 	Checksum,
 	getCache,
-	NoHistoryWithSeedCache: new NoHistoryWithSeedCache(),
+	FallbackCache: new FallbackCache(),
+	NoHistoryWithSeedCache: new NoHistoryWithSeedCache({
+		cache: {
+			ttl: 4 * 60 * 60 * 1000, // 4 hour
+			max: 750
+		}
+	}),
 	readPage,
 	search,
-	VolatileHistoryCache: new VolatileHistoryCache(),
+	VolatileHistoryCache: new VolatileHistoryCache({
+		cache: {
+			ttl: 30 * 1000,
+			max: 250
+		}
+	}),
 	withMetadata
 } as const
