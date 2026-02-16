@@ -313,9 +313,10 @@ export abstract class VolatileHistoryCache {
 	// burstCache
 	static cache = new LRUCache<number, string>({
 		max: 5000,
-		ttl: 5
+		ttl: 7
 	})
 
+	// check regardless of seed because ttl is very short
 	static hash = ({ history, message, think }: Models['ask']) =>
 		cyrb53(
 			`${history?.map((x) => x.content).join('|')}|${message}|${think ? '1' : '0'}`
