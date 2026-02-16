@@ -20,11 +20,12 @@ export const Models = {
 				t.Object({
 					role: t.UnionEnum(['user', 'assistant']),
 					content: t.String({
-						maxLength: 16384
-					})
+						maxLength: 1536
+					}),
+					checksum: t.String()
 				}),
 				{
-					maxItems: 16
+					maxItems: 8
 				}
 			)
 		)

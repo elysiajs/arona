@@ -1,4 +1,8 @@
+import { timingSafeEqual } from 'crypto'
+import { LRUCache } from 'lru-cache'
+
 import {
+	lastAssistantMessageIsCompleteWithToolCalls,
 	ModelMessage,
 	stepCountIs,
 	streamText,
@@ -15,8 +19,8 @@ import {
 } from './libs/tool'
 import { getEmbedding, instruction, model, retry, sql } from '@arona/libs'
 
-import { compressHistory } from './libs'
-import type { History, Reference } from './model'
+import { compressHistory, cyrb53 } from './libs'
+import type { History, Models, Reference } from './model'
 import { SQL } from './const'
 
 interface AskParams {
@@ -253,8 +257,84 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 	return references
 }
 
+const AI_CHECKSUM_SECRET = process.env.AI_CHECKSUM_SECRET
+if (!AI_CHECKSUM_SECRET) throw new Error('AI_CHECKSUM_SECRET is not set')
+
+export abstract class Checksum {
+	static cache = {
+		fromContent: new LRUCache<string, string>({
+			max: 250,
+			ttl: 9 * 60 * 60 * 1000 // 9 hour
+		}),
+		// Hot cache for recently compared checksums to avoid DDOS
+		// Max content length is 1,280
+		// 1,280 * 5,000 = 6.4MB in worst case which is acceptable for memory
+		// which is clear in 4 minutes
+		fromChecksum: new LRUCache<string, boolean>({
+			max: 5000,
+			ttl: 30 * 1000 // 30 seconds
+		})
+	} as const
+
+	static generate(content: string) {
+		if (this.cache.fromContent.has(content))
+			return this.cache.fromContent.get(content)!
+
+		const hash = new Bun.CryptoHasher('sha256', AI_CHECKSUM_SECRET)
+			.update(content)
+			.digest('hex')
+
+		this.cache.fromContent.set(content, hash)
+
+		return hash
+	}
+
+	static verify(content: string, checksum: string) {
+		try {
+			if (this.cache.fromChecksum.has(checksum))
+				return this.cache.fromChecksum.get(checksum)!
+
+			const isEqual = timingSafeEqual(
+				Buffer.from(this.generate(content), 'hex'),
+				Buffer.from(checksum, 'hex')
+			)
+
+			this.cache.fromChecksum.set(checksum, isEqual)
+
+			return isEqual
+		} catch {
+			return false
+		}
+	}
+}
+
+export function withMetadata(content: string) {
+	return `${content}\n---Elysia-Metadata---\nchecksum:${AI.Checksum.generate(content)}`
+}
+
+export abstract class VolatileHistoryCache {
+	// burstCache
+	static cache = new LRUCache<number, string>({
+		max: 5000,
+		ttl: 30 * 1000 // 30 seconds
+	})
+
+	static hash = ({ history, message, think }: Models['ask']) =>
+		cyrb53(
+			`${history?.map((x) => x.content).join('|')}|${message}|${think ? '1' : '0'}`
+		)
+
+	static get = (Models: Models['ask']) => this.cache.get(this.hash(Models))
+	static has = (Models: Models['ask']) => this.cache.has(this.hash(Models))
+	static set = (Models: Models['ask'], response: string) =>
+		this.cache.set(this.hash(Models), response)
+}
+
 export const AI = {
 	ask,
+	Checksum,
 	readPage,
-	search
+	search,
+	VolatileHistoryCache,
+	withMetadata
 } as const

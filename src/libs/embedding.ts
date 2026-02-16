@@ -1,4 +1,4 @@
-import { embed, pruneMessages } from 'ai'
+import { embed } from 'ai'
 import { LRUCache } from 'lru-cache'
 
 import { openai } from './ai'

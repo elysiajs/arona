@@ -2,7 +2,6 @@ import { generateText } from 'ai'
 import {
 	getEmbeddingBuffer,
 	log,
-	model,
 	smallModel,
 	redis,
 	stripFillers,

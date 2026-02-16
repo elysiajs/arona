@@ -30,12 +30,12 @@ export const ai = new Elysia()
 		'/ask',
 		async function* ({
 			AI,
+			body,
 			body: { seed, message, history, reference: requestedPage, think },
 			ip,
 			request
 		}) {
 			// yield 'Elysia chan is busy packing her things to a library... Please visit her later in a while!'
-
 			const key = createCacheKey({
 				message,
 				seed,
@@ -53,7 +53,7 @@ export const ai = new Elysia()
 					if (cache) {
 						log(`AI Cache hit for '${key}'`)
 
-						yield cache
+						yield AI.withMetadata(cache)
 						return
 					}
 				}
@@ -75,7 +75,7 @@ export const ai = new Elysia()
 				done = true
 
 				if (cache) {
-					yield cache
+					yield AI.withMetadata(cache)
 					return
 				}
 			}
@@ -162,6 +162,8 @@ export const ai = new Elysia()
 				response += `\n${sourceText}`
 			}
 
+			yield AI.withMetadata('')
+
 			// Intentionally no await the rest to not block the response
 			if (key)
 				redis.set(
@@ -172,16 +174,30 @@ export const ai = new Elysia()
 					message.length > 256 ? 1_800 : 10_800
 				)
 
+			if (history?.length) AI.VolatileHistoryCache.set(body, response)
+
 			normalized.then((value) => {
 				if (value) SemanticCache.set(value, response)
 			})
 		},
 		{
-			headers: 'turnstile',
 			body: 'AI.Ask',
 			parse: 'json',
 			turnstile: true,
-			pow: !isDev as true
+			pow: !isDev as true,
+			beforeHandle({ body, status, AI }) {
+				if (!body.history) return
+
+				if (body.history?.length > 13)
+					body.history = body.history.slice(-13)
+
+				for (const { content, checksum } of body.history)
+					if (!AI.Checksum.verify(content, checksum))
+						return status(422, 'Invalid history. Please start a new conversation.')
+
+				if (AI.VolatileHistoryCache.has(body))
+					return AI.withMetadata(AI.VolatileHistoryCache.get(body)!)
+			}
 		}
 	)
 

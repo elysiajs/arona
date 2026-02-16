@@ -2,40 +2,21 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { createGroq } from '@ai-sdk/groq'
 // import { createCerebras } from '@ai-sdk/cerebras'
 
-const cfAccountId = process.env.CF_ACCOUNT_ID
-const aiGatewayKey = process.env.AI_GATEWAY_KEY
-const aiGatewayID = process.env.AI_GATEWAY_ID
 const oaiKey = process.env.OPENAI_API_KEY
-
 if (!oaiKey) throw new Error('OPENAI_API_KEY is not set')
-if (!cfAccountId) throw new Error('CF_ACCOUNT_ID is not set')
-if (!aiGatewayKey) throw new Error('AI_GATEWAY_KEY is not set')
-if (!aiGatewayID) throw new Error('AI_GATEWAY_ID is not set')
-
-// const baseURL = `https://gateway.ai.cloudflare.com/v1/${cfAccountId}/${aiGatewayID}`
 
 export const openai = createOpenAI({
 	apiKey: oaiKey
 })
 
-export const groq = createGroq({
-	// baseURL: `${baseURL}/groq`,
-	headers: {
-		'cf-aig-authorization': `Bearer ${aiGatewayKey}`
-	}
-})
+export const groq = createGroq()
 
 export const model = groq('openai/gpt-oss-120b')
 export const smallModel = groq('openai/gpt-oss-20b')
 
-// export const cerebras = createCerebras({
-// 	baseURL: `${baseURL}/cerebras`,
-// 	headers: {
-// 		'cf-aig-authorization': `Bearer ${aiGatewayKey}`
-// 	}
-// })
-
+// export const cerebras = createCerebras()
 // export const model = cerebras('gpt-oss-120b')
+// export const model = cerebras('gpt-oss-20b')
 
 export const tableOfContents = `
 ## Table of Contents

@@ -13,7 +13,8 @@ export const turnstileMacro = new Elysia()
 	.model({
 		turnstile: t.Object(
 			{
-				'x-turnstile-token': t.String()
+				'x-turnstile-token': t.String(),
+				'x-api-key': t.Optional(t.String())
 			},
 			{
 				additionalProperties: true
@@ -22,6 +23,7 @@ export const turnstileMacro = new Elysia()
 	})
 	.macro('turnstile', {
 		ip: true,
+		headers: (isDev ? undefined : 'turnstile') as 'turnstile',
 		beforeHandle: async function turnstile({ headers, status, set, ip }) {
 			if (isDev || headers['x-api-key'] === API_KEY) return
 
