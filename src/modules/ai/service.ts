@@ -294,7 +294,10 @@ export abstract class Checksum {
 			if (this.cache.fromChecksum.has(checksum))
 				return this.cache.fromChecksum.get(checksum)!
 
-			const isEqual = checksum === this.generate(content)
+			const isEqual = timingSafeEqual(
+				Buffer.from(this.generate(content)),
+				Buffer.from(checksum)
+			)
 
 			this.cache.fromChecksum.set(checksum, isEqual)
 
