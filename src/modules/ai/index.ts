@@ -191,9 +191,15 @@ export const ai = new Elysia()
 				if (body.history?.length > 13)
 					body.history = body.history.slice(-13)
 
-				for (const { content, checksum } of body.history)
-					if (!AI.Checksum.verify(content, checksum))
-						return status(422, 'Invalid history. Please start a new conversation.')
+				for (const { content, checksum, role } of body.history)
+					if (
+						role === 'assistant' &&
+						!AI.Checksum.verify(content, checksum)
+					)
+						return status(
+							422,
+							'Invalid history. Please start a new conversation.'
+						)
 
 				if (AI.VolatileHistoryCache.has(body))
 					return AI.withMetadata(AI.VolatileHistoryCache.get(body)!)
