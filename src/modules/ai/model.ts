@@ -5,7 +5,7 @@ export const Models = {
 	history: z.array(
 		z.object({
 			role: z.literal('user').or(z.literal('assistant')),
-			content: z.string().max(16384)
+			content: z.string().max(8192)
 		})
 	),
 	ask: t.Object({

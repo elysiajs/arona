@@ -6,6 +6,7 @@ import {
 	API_KEY,
 	cache,
 	isDev,
+	log,
 	rateLimitMacro,
 	redis,
 	retry,
@@ -42,22 +43,21 @@ export const ai = new Elysia()
 			}
 
 			const references: Reference[] = []
-			if (requestedPage) {
-				const pages = await cache(`page:${requestedPage}`, () =>
+			if (requestedPage)
+				await cache(`page:${requestedPage}`, () =>
 					retry(
 						() =>
 							AI.readPage(requestedPage) as unknown as Reference[]
 					)
-				)
-
-				if (pages)
-					references.push(
-						...pages.map((page) => ({
-							...page,
-							score: 1
-						}))
-					)
-			}
+				).then((pages) => {
+					if (pages.length)
+						references.push(
+							...pages.map((page) => ({
+								...page,
+								score: 1
+							}))
+						)
+				})
 
 			const stream = await AI.ask({
 				abortSignal: request.signal,
@@ -91,6 +91,7 @@ export const ai = new Elysia()
 
 			if (stream instanceof Error) {
 				yield 'Elysia chan is feeling a bit under the weather right now. Please try again later!'
+				log(stream)
 				return
 			}
 

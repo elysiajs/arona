@@ -7,8 +7,8 @@ export function raceFirstTruthy<T>(
 
 	let pending = promises.length
 
-	return new Promise((resolve, reject) => {
-		promises.forEach((promise, i) => {
+	return new Promise((resolve) => {
+		promises.forEach((promise) => {
 			;(typeof promise === 'function' ? promise() : promise)
 				.then((value) => {
 					pending--
