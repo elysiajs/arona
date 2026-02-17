@@ -1,9 +1,11 @@
 services:
   pg:
-    container_name: arona_pg
-    image: pgvector/pgvector:pg18-trixie
+    container_name: arona_paradedb
+    image: paradedb/paradedb
     network_mode: host
     environment:
+      POSTGRES_DB: arona
+      POSTGRES_USER: plana
       POSTGRES_PASSWORD: 12345678
 
   dragonfly:
