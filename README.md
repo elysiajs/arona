@@ -1,11 +1,13 @@
-# Arona
+# <img src=https://github.com/user-attachments/assets/e7e2f885-29be-4eba-bb06-2c02ea90a56e alt=Arona width=36 /> Arona
 
-Arona is Elysia documentation search using AI with RAG
+Arona is Elysia's documentation search using AI with RAG
+
+![Elysia search screenshot](https://github.com/user-attachments/assets/c8350ec5-dea0-4e04-9a5f-866b535877d1)
 
 ## What is
 Standard RAG
 
-When user ask question, it will query the vector database to find the most relevant content, then use that content to answer the question
+When a user ask question, it will query the vector database to find the most relevant content, then use that content to answer the question
 
 It clone Elysia documentation and index the content into embedding and BM25 index
 
@@ -59,3 +61,4 @@ Most of the stack is preferably self-hosted when possible:
 - Turnstile - Proof of Work to prevent abuse and spam
 
 See `.env.example` for required environment variables to setup
+
