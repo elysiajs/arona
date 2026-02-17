@@ -60,5 +60,7 @@ Most of the stack is preferably self-hosted when possible:
 - Axiom - Logging and monitoring
 - Turnstile - Proof of Work to prevent abuse and spam
 
-See `.env.example` for required environment variables to setup
-
+## Setup
+1. Set `.env` variables, you can refer to `.env.example` for the required variables
+2. Run docker compose up -d to start the services
+3. Setup using `scripts/setup.ts`, modify the script to fit your documentation repo
