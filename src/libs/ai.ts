@@ -18,7 +18,7 @@ const mainProviders = process.env.OPENROUTER_MAIN_PROVIDERS?.split(',').map(
 	(x) => x.trim()
 )
 
-export const model = router('openai/gpt-oss-120b:exacto', {
+export const model = router('openai/gpt-oss-120b', {
 	provider: mainProviders
 		? {
 				only: mainProviders,
