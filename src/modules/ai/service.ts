@@ -112,14 +112,20 @@ export function ask({
 										: [])
 								],
 								providerOptions: {
-									groq: {
-										reasoningFormat: 'hidden',
-										reasoningEffort: think
-											? 'medium'
-											: 'low',
+									openrouter: {
 										user: ip,
-										serviceTier: 'auto'
+										reasoning: {
+											effort: think ? 'medium' : 'low'
+										}
 									}
+									// groq: {
+									// 	reasoningFormat: 'hidden',
+									// 	reasoningEffort: think
+									// 		? 'medium'
+									// 		: 'low',
+									// 	user: ip,
+									// 	serviceTier: 'auto'
+									// }
 									// cerebras: {
 									// 	reasoning_effort: think
 									// 		? 'medium'
@@ -351,7 +357,7 @@ class FallbackCache extends BurstCache<Models['ask'], string> {
 		)
 }
 
-export async function getCache(body: Models['ask']) {
+export async function getCache(body: Models['ask'], ip?: string) {
 	const { seed, message, history, think, reference } = body
 
 	if (!seed) {
@@ -379,7 +385,7 @@ export async function getCache(body: Models['ask']) {
 			const cache = await raceFirstTruthy(
 				SemanticCache.get(message),
 				async () => {
-					const key = await SemanticCache.normalize(message)
+					const key = await SemanticCache.normalize(message, ip)
 					if (!key || done) return
 
 					return SemanticCache.get(key)

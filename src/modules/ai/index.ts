@@ -36,7 +36,7 @@ export const ai = new Elysia()
 		}) {
 			// yield 'Elysia chan is busy packing her things to a library... Please visit her later in a while!'
 
-			const responseCache = await AI.getCache(body)
+			const responseCache = await AI.getCache(body, ip)
 			if (responseCache) {
 				yield AI.withMetadata(responseCache)
 				return
@@ -151,7 +151,7 @@ export const ai = new Elysia()
 			AI.FallbackCache.set(body, response)
 
 			if (!reference)
-				SemanticCache.normalize(message).then((normalized) => {
+				SemanticCache.normalize(message, ip).then((normalized) => {
 					if (normalized) SemanticCache.set(normalized, response)
 				})
 		},

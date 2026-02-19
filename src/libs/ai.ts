@@ -1,5 +1,6 @@
 import { createOpenAI } from '@ai-sdk/openai'
-import { createGroq } from '@ai-sdk/groq'
+import { createOpenRouter } from '@openrouter/ai-sdk-provider'
+// import { createGroq } from '@ai-sdk/groq'
 // import { createCerebras } from '@ai-sdk/cerebras'
 
 const oaiKey = process.env.OPENAI_API_KEY
@@ -9,10 +10,28 @@ export const openai = createOpenAI({
 	apiKey: oaiKey
 })
 
-export const groq = createGroq()
+export const router = createOpenRouter({
+	apiKey: process.env.OPENROUTER_API_KEY
+})
 
-export const model = groq('openai/gpt-oss-120b')
-export const smallModel = groq('openai/gpt-oss-20b')
+const mainProviders = process.env.OPENROUTER_MAIN_PROVIDERS?.split(',').map(
+	(x) => x.trim()
+)
+
+export const model = router('openai/gpt-oss-120b', {
+	provider: mainProviders
+		? {
+				only: mainProviders,
+				order: mainProviders
+			}
+		: undefined
+})
+export const smallModel = router('openai/gpt-oss-20b')
+
+// export const groq = createGroq()
+
+// export const model = groq('openai/gpt-oss-120b')
+// export const smallModel = groq('openai/gpt-oss-20b')
 
 // export const cerebras = createCerebras()
 // export const model = cerebras('gpt-oss-120b')

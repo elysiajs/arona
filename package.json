@@ -15,6 +15,7 @@
 		"@elysiajs/cors": "^1.4.1",
 		"@elysiajs/openapi": "^1.4.13",
 		"@elysiajs/opentelemetry": "^1.4.10",
+		"@openrouter/ai-sdk-provider": "^2.2.3",
 		"@opentelemetry/exporter-trace-otlp-proto": "^0.210.0",
 		"@opentelemetry/sdk-trace-node": "^2.4.0",
 		"ai": "^6.0.37",

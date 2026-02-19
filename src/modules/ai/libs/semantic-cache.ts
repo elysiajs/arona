@@ -123,7 +123,7 @@ export abstract class SemanticCache {
 		}
 	}
 
-	static async normalize(prompt: string) {
+	static async normalize(prompt: string, ip?: string) {
 		if (
 			prompt.length < 12 ||
 			prompt.length > 192 ||
@@ -147,11 +147,17 @@ export abstract class SemanticCache {
 						topP: 1,
 						maxOutputTokens: 192,
 						providerOptions: {
-							groq: {
-								reasoningEffort: 'low',
-								serviceTier: 'auto',
-								structuredOutputs: false
+							openrouter: {
+								user: ip,
+								reasoning: {
+									effort: 'none'
+								}
 							}
+							// groq: {
+							// 	reasoningEffort: 'low',
+							// 	serviceTier: 'auto',
+							// 	structuredOutputs: false
+							// }
 						}
 					}),
 				3,
