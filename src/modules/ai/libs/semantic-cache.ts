@@ -16,8 +16,9 @@ const shouldNotCache = (prompt: string) =>
 const normalizePromptInstruction = `Reduce the user query to its canonical search intent. Output ONLY the normalized form. No explanation.
 - Remove all filler words, pleasantries
 - Reduce to core topic + action
-- Do not remove word "Elysia"
 - Use consistent terminology
+- Use only meaningful words
+- Do not remove word "Elysia"
 - Keep it under 12 words`
 
 export abstract class SemanticCache {
