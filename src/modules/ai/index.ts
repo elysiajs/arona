@@ -30,7 +30,7 @@ export const ai = new Elysia()
 		async function* ({
 			AI,
 			body,
-			body: { seed, message, history, reference: requestedPage, think },
+			body: { seed, message, history, reference, think },
 			ip,
 			request
 		}) {
@@ -43,11 +43,11 @@ export const ai = new Elysia()
 			}
 
 			const references: Reference[] = []
-			if (requestedPage)
-				await cache(`page:${requestedPage}`, () =>
+			if (reference)
+				await cache(`page:${reference}`, () =>
 					retry(
 						() =>
-							AI.readPage(requestedPage) as unknown as Reference[]
+							AI.readPage(reference) as unknown as Reference[]
 					)
 				).then((pages) => {
 					if (pages.length)
@@ -132,7 +132,7 @@ export const ai = new Elysia()
 				seed,
 				history,
 				think,
-				page: requestedPage
+				page: reference
 			})
 
 			if (key)
@@ -145,14 +145,15 @@ export const ai = new Elysia()
 				)
 
 			if (history?.length) AI.VolatileHistoryCache.set(body, response)
-			else if (seed)
+			else if (seed && !reference)
 				AI.NoHistoryWithSeedCache.set({ message, seed }, response)
 
 			AI.FallbackCache.set(body, response)
 
-			SemanticCache.normalize(message).then((normalized) => {
-				if (normalized) SemanticCache.set(normalized, response)
-			})
+			if (!reference)
+				SemanticCache.normalize(message).then((normalized) => {
+					if (normalized) SemanticCache.set(normalized, response)
+				})
 		},
 		{
 			body: 'AI.Ask',

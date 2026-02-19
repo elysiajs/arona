@@ -373,27 +373,29 @@ export async function getCache(body: Models['ask']) {
 			}
 		}
 
-		let done = false
+		if (!reference) {
+			let done = false
 
-		const cache = await raceFirstTruthy(
-			SemanticCache.get(message),
-			async () => {
-				const key = await SemanticCache.normalize(message)
-				if (!key || done) return
+			const cache = await raceFirstTruthy(
+				SemanticCache.get(message),
+				async () => {
+					const key = await SemanticCache.normalize(message)
+					if (!key || done) return
 
-				return SemanticCache.get(key)
-			}
-		)
+					return SemanticCache.get(key)
+				}
+			)
 
-		done = true
+			done = true
 
-		if (cache) return cache
+			if (cache) return cache
+		}
 	}
 
 	if (history?.length) {
 		if (AI.VolatileHistoryCache.has(body))
 			return AI.VolatileHistoryCache.get(body)!
-	} else if (seed) {
+	} else if (seed && !reference) {
 		if (AI.NoHistoryWithSeedCache.has({ message, seed }))
 			return AI.NoHistoryWithSeedCache.get({ message, seed })!
 	}
