@@ -46,8 +46,7 @@ export const ai = new Elysia()
 			if (reference)
 				await cache(`page:${reference}`, () =>
 					retry(
-						() =>
-							AI.readPage(reference) as unknown as Reference[]
+						() => AI.readPage(reference) as unknown as Reference[]
 					)
 				).then((pages) => {
 					if (pages.length)
@@ -59,7 +58,7 @@ export const ai = new Elysia()
 						)
 				})
 
-			const stream = await AI.ask({
+			const stream = AI.ask({
 				abortSignal: request.signal,
 				seed,
 				message,
@@ -87,13 +86,7 @@ export const ai = new Elysia()
 					ai.setAttributes(attributes)
 					ai.end()
 				}
-			}).catch((err) => new Error(err))
-
-			if (stream instanceof Error) {
-				yield 'Elysia chan is feeling a bit under the weather right now. Please try again later!'
-				log(stream)
-				return
-			}
+			})
 
 			let response = ''
 
@@ -123,6 +116,9 @@ export const ai = new Elysia()
 			}
 
 			response = response.trimEnd()
+
+			if (!response)
+				yield 'Elysia chan is feeling a bit under the weather right now. Please try again later!'
 
 			yield AI.withMetadata('')
 
@@ -175,6 +171,9 @@ export const ai = new Elysia()
 							422,
 							'Invalid history. Please start a new conversation.'
 						)
+			},
+			error: function* () {
+				yield 'Elysia chan is feeling a bit under the weather right now. Please try again later!'
 			}
 		}
 	)

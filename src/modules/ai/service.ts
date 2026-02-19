@@ -68,92 +68,69 @@ export function ask({
 			} satisfies ModelMessage)
 		: undefined
 
-	const stream = retry(
-		() => {
-			return record(
-				'Gather Resources',
-				async (span) =>
-					await new Promise<AsyncGenerator<string, any, any>>(
-						async (resolve, reject) => {
-							const response = streamText({
-								model,
-								abortSignal,
-								tools: Object.assign(
-									{
-										readPage: readPageTool,
-										search: searchTool,
-										tableOfContents: tableOfContentsTool
-									},
-									(history?.length ?? 0) > 3
-										? { readHistory: readHistoryTool! }
-										: {}
-								) as any,
-								stopWhen: stepCountIs(think ? 9 : 5),
-								seed,
-								topP: 0.7,
-								presencePenalty: 0.4,
-								maxOutputTokens: 1408,
-								messages: [
-									{
-										role: 'system',
-										content: instruction
-									},
-									{
-										role: 'user',
-										content: history?.length
-											? message
-											: `Hi Elysia chan! Would you kindly help me? ${message}`
-									},
-									...(initialReference
-										? [initialReference]
-										: []),
-									...(history?.length
-										? compressHistory(history).slice(0, 3)
-										: [])
-								],
-								providerOptions: {
-									openrouter: {
-										user: ip,
-										reasoning: {
-											effort: think ? 'medium' : 'low'
-										}
-									}
-									// groq: {
-									// 	reasoningFormat: 'hidden',
-									// 	reasoningEffort: think
-									// 		? 'medium'
-									// 		: 'low',
-									// 	user: ip,
-									// 	serviceTier: 'auto'
-									// }
-									// cerebras: {
-									// 	reasoning_effort: think
-									// 		? 'medium'
-									// 		: 'low',
-									// 	reasoningEffort: think
-									// 		? 'medium'
-									// 		: 'low'
-									// }
-								},
-								onFinish(metadata) {
-									onFinish?.(metadata as any)
-								}
-							})
-
-							for await (const content of response.textStream)
-								if (content.trim())
-									resolve(response.textStream as any)
-
-							reject('Retry')
-						}
-					)
-			)
-		},
-		3,
-		(n) => Math.pow(2, n) * 1000
-	)
-
-	return stream
+	return record('Gather Resources', () =>
+		streamText({
+			model,
+			abortSignal,
+			tools: Object.assign(
+				{
+					readPage: readPageTool,
+					search: searchTool,
+					tableOfContents: tableOfContentsTool
+				},
+				(history?.length ?? 0) > 3
+					? { readHistory: readHistoryTool! }
+					: {}
+			) as any,
+			stopWhen: stepCountIs(think ? 9 : 5),
+			seed,
+			topP: 0.7,
+			presencePenalty: 0.4,
+			maxOutputTokens: 1408,
+			maxRetries: 3,
+			messages: [
+				{
+					role: 'system',
+					content: instruction
+				},
+				{
+					role: 'user',
+					content: history?.length
+						? message
+						: `Hi Elysia chan! Would you kindly help me? ${message}`
+				},
+				...(initialReference ? [initialReference] : []),
+				...(history?.length ? compressHistory(history).slice(0, 3) : [])
+			],
+			providerOptions: {
+				openrouter: {
+					user: ip,
+					reasoning: {
+						effort: think ? 'medium' : 'low'
+					}
+				}
+				// groq: {
+				// 	reasoningFormat: 'hidden',
+				// 	reasoningEffort: think
+				// 		? 'medium'
+				// 		: 'low',
+				// 	user: ip,
+				// 	serviceTier: 'auto'
+				// }
+				// cerebras: {
+				// 	reasoning_effort: think
+				// 		? 'medium'
+				// 		: 'low',
+				// 	reasoningEffort: think
+				// 		? 'medium'
+				// 		: 'low'
+				// }
+			},
+			onFinish(metadata) {
+				onFinish?.(metadata as any)
+			}
+		})
+	).textStream
 }
 
 export async function readPage(link: string): Promise<Reference | Reference[]> {
