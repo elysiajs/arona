@@ -167,7 +167,7 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 	FROM
    	  documents d
 	WHERE
-	  link @@@ ${'summary:' + value}
+	  link @@@ ${`summary:${value.replace(/\(\)/g, '\\$1')}`}
 	),
 	normalized AS (
       SELECT
