@@ -88,11 +88,8 @@ export function ask({
 			presencePenalty: 0.4,
 			maxOutputTokens: 1600,
 			maxRetries: 3,
+			system: instruction,
 			messages: [
-				{
-					role: 'system',
-					content: instruction
-				},
 				{
 					role: 'user',
 					content: history?.length

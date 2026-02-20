@@ -36,11 +36,11 @@ export const ai = new Elysia()
 		}) {
 			// yield 'Elysia chan is busy packing her things to a library... Please visit her later in a while!'
 
-			const responseCache = await AI.getCache(body, ip)
-			if (responseCache) {
-				yield AI.withMetadata(responseCache)
-				return
-			}
+			// const responseCache = await AI.getCache(body, ip)
+			// if (responseCache) {
+			// 	yield AI.withMetadata(responseCache)
+			// 	return
+			// }
 
 			const references: Reference[] = []
 			if (reference)
