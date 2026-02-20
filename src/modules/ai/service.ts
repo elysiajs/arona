@@ -296,8 +296,8 @@ export abstract class Checksum {
 	}
 }
 
-export function withMetadata(content: string) {
-	return `${content}\n---Elysia-Metadata---\nchecksum:${AI.Checksum.generate(content)}`
+export function withMetadata(content: string, { returnContent = true } = {}) {
+	return `${returnContent ? content : ''}\n---Elysia-Metadata---\nchecksum:${AI.Checksum.generate(content)}`
 }
 
 export class VolatileHistoryCache extends BurstCache<Models['ask'], string> {
