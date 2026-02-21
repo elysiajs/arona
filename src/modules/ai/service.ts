@@ -106,7 +106,7 @@ export function ask({
 				openrouter: {
 					user: ip,
 					reasoning: {
-						effort: think ? 'high' : 'medium'
+						effort: think ? 'medium' : 'low'
 					}
 				}
 				// groq: {
