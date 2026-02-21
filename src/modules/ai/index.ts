@@ -70,11 +70,14 @@ export const ai = new Elysia()
 						? true
 						: think,
 				onFinish({ usage, content }) {
+					const last = content.at(-1)
+
 					const attributes = {
 						'ai.question': message,
-						'ai.response': content.map((answer) =>
-							JSON.stringify(answer)
-						),
+						'ai.response': last?.type === 'text' ? last.text : '',
+						'ai.reasoning': content
+							.filter((content) => content.type === 'reasoning')
+							.map((reasoning) => reasoning.text),
 						'ai.references': references.map((x) => x.link),
 						'ai.input_tokens': usage.inputTokens ?? 0,
 						'ai.cached_input_tokens':
