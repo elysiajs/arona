@@ -169,7 +169,7 @@ export abstract class SemanticCache {
 				)
 
 				this.normalizeCache.set(prompt, (text = text.trim()))
-				span.setAttribute('normalied', text)
+				span.setAttribute('normalized', text)
 
 				return text
 			} catch {
