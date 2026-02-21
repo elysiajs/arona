@@ -139,7 +139,7 @@ export abstract class SemanticCache {
 		if (this.normalizeCache.has(prompt))
 			return this.normalizeCache.get(prompt)!
 
-		return record('SemanticCache.normalize: ', async (span) => {
+		return record(`SemanticCache.normalize: ${prompt}`, async (span) => {
 			try {
 				let { text } = await retry(
 					() =>
@@ -169,10 +169,7 @@ export abstract class SemanticCache {
 				)
 
 				this.normalizeCache.set(prompt, (text = text.trim()))
-				span.setAttributes({
-					prompt,
-					normalized: text
-				})
+				span.setAttribute('normalied', text)
 
 				return text
 			} catch {
