@@ -108,7 +108,7 @@ export const ai = new Elysia()
 			)
 
 			if (sources.length) {
-				yield '\n'
+				yield '\n\n'
 
 				const sourceText = sources
 					.map(
