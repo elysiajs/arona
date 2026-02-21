@@ -3,6 +3,7 @@ import { LRUCache } from 'lru-cache'
 
 import { openai } from './ai'
 import { retry } from './retry'
+import { record } from '@elysiajs/opentelemetry'
 
 const fillerPattern =
 	/^(?:can you tell me|i would like to|would you kindly|i was wondering|just wondering|quick question|do you know|help me with|i want to|i need to|could you|would you|can you|tell me|show me|help me|please|hello|hey|hi|pls|plz|and|to my codebase|for my codebase)\s+/gi
@@ -41,34 +42,38 @@ interface GetEmbeddingOptions {
 type EmbeddingModelV3Embedding = Awaited<ReturnType<typeof embed>>['embedding']
 const pendingCache = new Map<string, Promise<EmbeddingModelV3Embedding>>()
 
-export const getEmbedding = async (
+export const getEmbedding = (
 	prompt: string,
 	{ ttl = 32_400, skipFiller = false }: GetEmbeddingOptions = {}
 ) => {
-	const shouldSkip = shouldNotCache(prompt)
+	return record('getEmbedding', async (span) => {
+		span.setAttribute('prompt', prompt)
 
-	if (!skipFiller) prompt = stripFillers(prompt)
+		const shouldSkip = shouldNotCache(prompt)
 
-	if (!shouldSkip && cache.has(prompt)) return cache.get(prompt)!
-	if (pendingCache.has(prompt)) return pendingCache.get(prompt)!
+		if (!skipFiller) prompt = stripFillers(prompt)
 
-	const pending = retry(() =>
-		embed({
-			model: openai.embeddingModel('text-embedding-3-small'),
-			value: prompt
-		})
-	).then((v) => v.embedding)
+		if (!shouldSkip && cache.has(prompt)) return cache.get(prompt)!
+		if (pendingCache.has(prompt)) return pendingCache.get(prompt)!
 
-	pendingCache.set(prompt, pending)
+		const pending = retry(() =>
+			embed({
+				model: openai.embeddingModel('text-embedding-3-small'),
+				value: prompt
+			})
+		).then((v) => v.embedding)
 
-	const embedding = await pending
+		pendingCache.set(prompt, pending)
 
-	if (!shouldSkip)
-		cache.set(prompt, embedding, {
-			ttl: ttl * 1000
-		})
+		const embedding = await pending
 
-	return embedding
+		if (!shouldSkip)
+			cache.set(prompt, embedding, {
+				ttl: ttl * 1000
+			})
+
+		return embedding
+	})
 }
 
 export const getEmbeddingBuffer = async (

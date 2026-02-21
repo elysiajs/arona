@@ -1,4 +1,7 @@
+import { record } from '@elysiajs/opentelemetry'
 import { generateText } from 'ai'
+import { LRUCache } from 'lru-cache'
+
 import {
 	getEmbeddingBuffer,
 	log,
@@ -8,7 +11,6 @@ import {
 	retry
 } from '@arona/libs'
 import { cyrb53 } from './utils'
-import { LRUCache } from 'lru-cache/raw'
 
 const shouldNotCache = (prompt: string) =>
 	prompt.length > 72 || !isNaN(+prompt) || prompt.includes('```')
@@ -124,52 +126,58 @@ export abstract class SemanticCache {
 		}
 	}
 
-	static async normalize(prompt: string, ip?: string) {
-		if (
-			prompt.length < 12 ||
-			prompt.length > 192 ||
-			!isNaN(+prompt) ||
-			prompt.includes('```') ||
-			!prompt.includes(' ')
-		)
-			return
-
-		if (this.normalizeCache.has(prompt))
-			return this.normalizeCache.get(prompt)!
-
-		try {
-			let { text } = await retry(
-				() =>
-					generateText({
-						model: smallModel,
-						system: normalizePromptInstruction,
-						prompt,
-						temperature: 0,
-						topP: 1,
-						maxOutputTokens: 192,
-						providerOptions: {
-							openrouter: {
-								user: ip,
-								reasoning: {
-									effort: 'none'
-								}
-							}
-							// groq: {
-							// 	reasoningEffort: 'low',
-							// 	serviceTier: 'auto',
-							// 	structuredOutputs: false
-							// }
-						}
-					}),
-				3,
-				500
+	static normalize(prompt: string, ip?: string) {
+		return record('SemanticCache.normalize', async (span) => {
+			if (
+				prompt.length < 12 ||
+				prompt.length > 192 ||
+				!isNaN(+prompt) ||
+				prompt.includes('```') ||
+				!prompt.includes(' ')
 			)
+				return
 
-			this.normalizeCache.set(prompt, (text = text.trim()))
+			if (this.normalizeCache.has(prompt))
+				return this.normalizeCache.get(prompt)!
 
-			return text
-		} catch {
-			return
-		}
+			try {
+				let { text } = await retry(
+					() =>
+						generateText({
+							model: smallModel,
+							system: normalizePromptInstruction,
+							prompt,
+							temperature: 0,
+							topP: 1,
+							maxOutputTokens: 192,
+							providerOptions: {
+								openrouter: {
+									user: ip,
+									reasoning: {
+										effort: 'none'
+									}
+								}
+								// groq: {
+								// 	reasoningEffort: 'low',
+								// 	serviceTier: 'auto',
+								// 	structuredOutputs: false
+								// }
+							}
+						}),
+					3,
+					500
+				)
+
+				this.normalizeCache.set(prompt, (text = text.trim()))
+				span.setAttributes({
+					prompt,
+					normalized: text
+				})
+
+				return text
+			} catch {
+				return
+			}
+		})
 	}
 }
