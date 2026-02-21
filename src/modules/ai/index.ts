@@ -65,7 +65,10 @@ export const ai = new Elysia()
 				history,
 				references,
 				ip,
-				think,
+				think:
+					message.includes('```') || message.length > 1024
+						? true
+						: think,
 				onFinish({ usage, content }) {
 					const attributes = {
 						'ai.question': message,
