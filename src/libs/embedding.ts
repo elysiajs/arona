@@ -46,16 +46,14 @@ export const getEmbedding = (
 	prompt: string,
 	{ ttl = 32_400, skipFiller = false }: GetEmbeddingOptions = {}
 ) => {
-	return record('getEmbedding', async (span) => {
-		span.setAttribute('prompt', prompt)
+	const shouldSkip = shouldNotCache(prompt)
 
-		const shouldSkip = shouldNotCache(prompt)
+	if (!skipFiller) prompt = stripFillers(prompt)
 
-		if (!skipFiller) prompt = stripFillers(prompt)
+	if (!shouldSkip && cache.has(prompt)) return cache.get(prompt)!
+	if (pendingCache.has(prompt)) return pendingCache.get(prompt)!
 
-		if (!shouldSkip && cache.has(prompt)) return cache.get(prompt)!
-		if (pendingCache.has(prompt)) return pendingCache.get(prompt)!
-
+	return record(`getEmbedding: ${prompt}`, async (span) => {
 		const pending = retry(() =>
 			embed({
 				model: openai.embeddingModel('text-embedding-3-small'),

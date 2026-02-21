@@ -127,19 +127,19 @@ export abstract class SemanticCache {
 	}
 
 	static normalize(prompt: string, ip?: string) {
-		return record('SemanticCache.normalize', async (span) => {
-			if (
-				prompt.length < 12 ||
-				prompt.length > 192 ||
-				!isNaN(+prompt) ||
-				prompt.includes('```') ||
-				!prompt.includes(' ')
-			)
-				return
+		if (
+			prompt.length < 12 ||
+			prompt.length > 192 ||
+			!isNaN(+prompt) ||
+			prompt.includes('```') ||
+			!prompt.includes(' ')
+		)
+			return
 
-			if (this.normalizeCache.has(prompt))
-				return this.normalizeCache.get(prompt)!
+		if (this.normalizeCache.has(prompt))
+			return this.normalizeCache.get(prompt)!
 
+		return record('SemanticCache.normalize: ', async (span) => {
 			try {
 				let { text } = await retry(
 					() =>
