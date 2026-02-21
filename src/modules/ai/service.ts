@@ -227,14 +227,14 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 	  c.link
 	ORDER BY
 	  c.score DESC
-	LIMIT 4;`.then((x) => [...x])
+	LIMIT 3;`.then((x) => [...x])
 
 	if(abortSignal?.aborted) return references
 
 	const vectorResult = await sql
 		.unsafe<
 			Reference[]
-		>(SQL.findReference, [`[${await getEmbedding(value).then((x) => x.join(','))}]`, 8 - references.length])
+		>(SQL.findReference, [`[${await getEmbedding(value).then((x) => x.join(','))}]`, 6 - references.length])
 		.then((x) => [...x])
 
 	for (const ref of vectorResult) {
