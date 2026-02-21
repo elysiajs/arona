@@ -154,7 +154,7 @@ export abstract class SemanticCache {
 								openrouter: {
 									user: ip,
 									reasoning: {
-										effort: 'none'
+										effort: 'minimal'
 									}
 								}
 								// groq: {
@@ -172,7 +172,9 @@ export abstract class SemanticCache {
 				span.setAttribute('normalized', text)
 
 				return text
-			} catch {
+			} catch (error) {
+				log(error)
+
 				return
 			}
 		})
