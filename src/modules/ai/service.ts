@@ -82,11 +82,11 @@ export function ask({
 					? { readHistory: readHistoryTool! }
 					: {}
 			) as any,
-			stopWhen: stepCountIs(think ? 9 : 5),
+			stopWhen: stepCountIs(think ? 12 : 8),
 			seed,
 			topP: 0.7,
 			presencePenalty: 0.4,
-			maxOutputTokens: 1600,
+			maxOutputTokens: 2048,
 			maxRetries: 3,
 			system: instruction,
 			messages: [
@@ -103,7 +103,7 @@ export function ask({
 				openrouter: {
 					user: ip,
 					reasoning: {
-						effort: think ? 'medium' : 'low'
+						effort: think ? 'high' : 'medium'
 					}
 				}
 				// groq: {
@@ -224,18 +224,18 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 	  c.link
 	ORDER BY
 	  c.score DESC
-	LIMIT 3;`.then((x) => [...x])
+	LIMIT 4;`.then((x) => [...x])
 
 	const vectorResult = await sql
 		.unsafe<
 			Reference[]
-		>(SQL.findReference, [`[${await getEmbedding(value).then((x) => x.join(','))}]`, 3])
+		>(SQL.findReference, [`[${await getEmbedding(value).then((x) => x.join(','))}]`, 8 - references.length])
 		.then((x) => [...x])
 
 	for (const ref of vectorResult) {
 		if (!references.find((r) => r.link === ref.link)) references.push(ref)
 
-		if (references.length >= 5) break
+		// if (references.length >= 8) break
 	}
 
 	setAttributes({
