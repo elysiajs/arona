@@ -10,7 +10,7 @@ import { search, readPage } from '../service'
 export const createSearchTool = (references: Reference[]) =>
 	tool({
 		description:
-			"Search relevant information. This tool is deterministic, don't call with the same parameters twice",
+			"Search relevant information from Elysia documentation. No need to specify 'Elysia' as keyword. This tool is deterministic, don't call with the same parameters twice",
 		inputSchema: z.object({
 			sentence: z.string().meta({
 				description: 'The keyword/sentence to search',
@@ -36,7 +36,7 @@ export const createSearchTool = (references: Reference[]) =>
 
 export const createPageTool = (references: Reference[]) =>
 	tool({
-		description: `Read a specific page with in detail. This tool is deterministic, don't call with the same parameters twice`,
+		description: `Read a specific page from Elysia documentation with in detail. This tool is deterministic, don't call with the same parameters twice`,
 		inputSchema: z.object({
 			link: z.string().meta({
 				description: 'The link of the page to read',
@@ -64,7 +64,7 @@ export const createPageTool = (references: Reference[]) =>
 
 export const tableOfContentsTool = tool({
 	description:
-		'List all available documents. Call "read_page" tool with link to read the page',
+		'List all available Elysia documents. Call "read_page" tool with link to read the page',
 	inputSchema: z.object({}),
 	outputSchema: z.string(),
 	execute: () => tableOfContents
