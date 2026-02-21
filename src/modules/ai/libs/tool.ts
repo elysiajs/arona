@@ -22,7 +22,7 @@ export const createSearchTool = (references: Reference[]) =>
 			log('Search:', sentence)
 
 			let documents = await retry(
-				() => cache(`search:${sentence}`, () => search(sentence)),
+				() => cache(`search: ${sentence}`, () => search(sentence)),
 				3
 			)
 

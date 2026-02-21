@@ -42,7 +42,7 @@ interface GetEmbeddingOptions {
 type EmbeddingModelV3Embedding = Awaited<ReturnType<typeof embed>>['embedding']
 const pendingCache = new Map<string, Promise<EmbeddingModelV3Embedding>>()
 
-export const getEmbedding = (
+export const getEmbedding = async (
 	prompt: string,
 	{ ttl = 32_400, skipFiller = false }: GetEmbeddingOptions = {}
 ) => {
@@ -53,7 +53,7 @@ export const getEmbedding = (
 	if (!shouldSkip && cache.has(prompt)) return cache.get(prompt)!
 	if (pendingCache.has(prompt)) return pendingCache.get(prompt)!
 
-	return record(`getEmbedding: ${prompt}`, async (span) => {
+	return record(`getEmbedding: ${prompt}`, async () => {
 		const pending = retry(() =>
 			embed({
 				model: openai.embeddingModel('text-embedding-3-small'),
@@ -70,7 +70,7 @@ export const getEmbedding = (
 				ttl: ttl * 1000
 			})
 
-		return embedding
+		return embedding as number[]
 	})
 }
 

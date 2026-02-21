@@ -229,6 +229,8 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 	  c.score DESC
 	LIMIT 4;`.then((x) => [...x])
 
+	if(abortSignal?.aborted) return references
+
 	const vectorResult = await sql
 		.unsafe<
 			Reference[]

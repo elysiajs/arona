@@ -126,7 +126,7 @@ export abstract class SemanticCache {
 		}
 	}
 
-	static normalize(prompt: string, ip?: string) {
+	static async normalize(prompt: string, ip?: string) {
 		if (
 			prompt.length < 12 ||
 			prompt.length > 192 ||
