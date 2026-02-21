@@ -28,9 +28,15 @@ export const createSearchTool = (references: Reference[]) =>
 
 			if (!documents) return null
 
-			references.push(...documents)
+			const refs = references.map((ref) => ref.link)
+			const newDocuments = documents.filter(
+				(document) => !refs.includes(document.link)
+			)
+			if (!newDocuments.length) return null
 
-			return documents
+			references.push(...newDocuments)
+
+			return newDocuments
 		}
 	})
 
@@ -72,7 +78,8 @@ export const tableOfContentsTool = tool({
 
 export const createHistoryTool = (execute: () => History) =>
 	tool({
-		description: 'Read conversation history. Call this tool when you think you are missing user context',
+		description:
+			'Read conversation history. Call this tool when you think you are missing user context',
 		inputSchema: z.object({}),
 		outputSchema: Models.history,
 		execute

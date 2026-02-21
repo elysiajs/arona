@@ -82,9 +82,12 @@ export function ask({
 					? { readHistory: readHistoryTool! }
 					: {}
 			) as any,
-			stopWhen: stepCountIs(think ? 12 : 8),
+			stopWhen: [
+				stepCountIs(think ? 12 : 8),
+				() => references.length > 32
+			],
 			seed,
-			topP: 0.7,
+			topP: 0.75,
 			presencePenalty: 0.4,
 			maxOutputTokens: 2048,
 			maxRetries: 3,
