@@ -33,9 +33,11 @@ export const Models = {
 	reference: z.object({
 		title: z.string(),
 		score: z.number(),
-		summary: z.string(),
+		summary: z.string().meta({
+			description: 'Part of the content retrieved from the page',
+		}),
 		link: z.string().meta({
-			description: 'The link of the page to read',
+			description: 'The link of the page to read to read when content is missing or not enough',
 			examples: ['essential/life-cycle']
 		})
 	}),

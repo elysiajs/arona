@@ -10,7 +10,7 @@ import { search, readPage } from '../service'
 export const createSearchTool = (references: Reference[]) =>
 	tool({
 		description:
-			"Search relevant information from Elysia documentation. No need to specify 'Elysia' as keyword. This tool is deterministic, don't call with the same parameters twice",
+			"Search relevant information from Elysia documentation. No need to specify 'Elysia' as keyword. Content is only some part of a page, use 'read_page' tool with 'link' to read full content. This tool is deterministic, don't call with the same parameters twice",
 		inputSchema: z.object({
 			sentence: z.string().meta({
 				description: 'The keyword/sentence to search',
