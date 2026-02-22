@@ -89,7 +89,7 @@ export function ask({
 			seed,
 			topP: 0.75,
 			presencePenalty: 0.4,
-			maxOutputTokens: 2048,
+			maxOutputTokens: 2560,
 			maxRetries: 3,
 			system: instruction,
 			messages: [
