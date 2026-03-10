@@ -17,7 +17,7 @@ if (isProduction && cluster.isPrimary) {
 	})
 } else {
 	import('./server').then(({ app }) => {
-		app.listen(process.env.PORT ?? 3000)
+		app.listen({ hostname: '0.0.0.0', port: process.env.PORT ?? 3000 })
 
 		console.log(
 			`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
