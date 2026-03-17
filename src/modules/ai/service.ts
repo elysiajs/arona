@@ -93,14 +93,16 @@ export function ask({
 			maxRetries: 3,
 			system: instruction,
 			messages: [
+				...(initialReference ? [initialReference] : []),
+				...(history?.length
+					? compressHistory(history).slice(0, 3)
+					: []),
 				{
 					role: 'user',
 					content: history?.length
 						? message
 						: `Hi Elysia chan! Would you kindly help me? ${message}`
-				},
-				...(initialReference ? [initialReference] : []),
-				...(history?.length ? compressHistory(history).slice(0, 3) : [])
+				}
 			],
 			providerOptions: {
 				openrouter: {
@@ -229,7 +231,7 @@ export async function search(value: string, abortSignal?: AbortSignal) {
 	  c.score DESC
 	LIMIT 3;`.then((x) => [...x])
 
-	if(abortSignal?.aborted) return references
+	if (abortSignal?.aborted) return references
 
 	const vectorResult = await sql
 		.unsafe<
