@@ -1,7 +1,7 @@
 import { Elysia } from 'elysia'
 
-export const ipMacro = new Elysia({ name: 'libs/ip' }).macro('ip', {
-	resolve: function getIP({ headers, server, request }) {
+export const ipMacro = new Elysia({ name: 'libs/ip' }).macro({ ip: {
+	derive: function getIP({ headers, server, request }) {
 		return {
 			ip:
 				headers['cf-connecting-ip'] ||
@@ -9,4 +9,4 @@ export const ipMacro = new Elysia({ name: 'libs/ip' }).macro('ip', {
 				(server?.requestIP(request)?.address as string)
 		}
 	}
-})
+} })

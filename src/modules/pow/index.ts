@@ -1,4 +1,4 @@
-import { Elysia, t } from 'elysia'
+import { Elysia, prefix, t } from 'elysia'
 
 import crypto from 'crypto'
 
@@ -14,6 +14,13 @@ export const pow = new Elysia({
 	.use(rateLimitMacro)
 	.get(
 		'/request',
+		{
+			rateLimit: true,
+			ip: true,
+			cookie: t.Cookie({
+				challenge: t.Optional(Models.challengeRecord)
+			})
+		},
 		({ ip, cookie: { challenge } }) => {
 			const nonce = crypto.randomBytes(32).toString('hex')
 			const issued = Date.now()
@@ -34,13 +41,6 @@ export const pow = new Elysia({
 				bits: CONFIG.POW_DIFFICULTY,
 				expires: issued + CONFIG.CHALLENGE_EXPIRY_MS
 			} as const
-		},
-		{
-			rateLimit: true,
-			ip: true,
-			cookie: t.Cookie({
-				challenge: t.Optional(Models.challengeRecord)
-			})
 		}
 	)
 
@@ -48,48 +48,50 @@ export const powMacro = new Elysia({
 	name: 'pow.macro'
 })
 	.use(ipMacro)
-	.model(Models)
-	.prefix('model', 'Pow.')
-	.macro('pow', {
-		ip: true,
-		body: 'Pow.ChallengeVerifyBody',
-		cookie: t.Cookie({
-			challenge: Models.challengeRecord
-		}),
-		beforeHandle: function pow({
-			ip,
-			status,
-			body: {
-				pow: { suffix }
-			},
-			cookie: { challenge }
-		}) {
-			if (challenge.value.ip !== ip) {
+	.model(prefix.capitalize('Pow', Models))
+	.macro({
+		pow: {
+			ip: true,
+			body: 'Pow.ChallengeVerifyBody',
+			cookie: t.Cookie({
+				challenge: Models.challengeRecord
+			}),
+			beforeHandle: function pow({
+				// @ts-expect-error
+				ip,
+				status,
+				body: {
+					pow: { suffix }
+				},
+				cookie: { challenge }
+			}) {
+				if (challenge.value.ip !== ip) {
+					challenge.remove()
+
+					return status(401, 'IP address mismatch')
+				}
+
+				if (
+					challenge.value.issued + CONFIG.CHALLENGE_EXPIRY_MS <
+					Date.now()
+				) {
+					challenge.remove()
+
+					return status(403, 'Challenge expired')
+				}
+
+				const credentialId = `${challenge.value.nonce}:${suffix}`
+				const hash = crypto
+					.createHash('sha256')
+					.update(credentialId)
+					.digest('hex')
+
+				const requiredPrefix = '0'.repeat(challenge.value.bits / 4)
+
+				if (!hash.startsWith(requiredPrefix))
+					return status(403, 'Invalid proof of work')
+
 				challenge.remove()
-
-				return status(401, 'IP address mismatch')
 			}
-
-			if (
-				challenge.value.issued + CONFIG.CHALLENGE_EXPIRY_MS <
-				Date.now()
-			) {
-				challenge.remove()
-
-				return status(403, 'Challenge expired')
-			}
-
-			const credentialId = `${challenge.value.nonce}:${suffix}`
-			const hash = crypto
-				.createHash('sha256')
-				.update(credentialId)
-				.digest('hex')
-
-			const requiredPrefix = '0'.repeat(challenge.value.bits / 4)
-
-			if (!hash.startsWith(requiredPrefix))
-				return status(403, 'Invalid proof of work')
-
-			challenge.remove()
 		}
 	})

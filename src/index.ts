@@ -1,15 +1,13 @@
 import cluster from 'cluster'
 import { availableParallelism } from 'os'
 
-import { Cron } from 'croner'
-
 import { isProduction, structure } from './libs'
 
 if (isProduction && cluster.isPrimary) {
 	const parallel = availableParallelism() - 1
 	for (let i = 0; i < parallel; i++) cluster.fork()
 
-	new Cron('0 */12 * * *', structure)
+	Bun.cron('0 */12 * * *', structure)
 
 	cluster.on('exit', (worker) => {
 		console.log(`Worker ${worker.process.pid} died, restarting...`)

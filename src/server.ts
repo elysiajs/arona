@@ -1,13 +1,14 @@
 import { Elysia, file } from 'elysia'
-import { openapi, fromTypes } from '@elysiajs/openapi'
-import { cors } from '@elysiajs/cors'
+import { openapi, fromTypes } from '@elysia/openapi'
+import { cors } from '@elysia/cors'
 
-import { opentelemetry } from '@elysiajs/opentelemetry'
+import { opentelemetry } from '@elysia/opentelemetry'
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-node'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
 
 import { ai, pow } from './modules'
 import { isDev, isProduction } from './libs'
+import { generateHeapSnapshot } from 'bun'
 
 export const app = new Elysia({
 	cookie: {
@@ -48,3 +49,6 @@ export const app = new Elysia({
 	.get('/heath', 'ok')
 	.use(ai)
 	.use(pow)
+
+const heap = generateHeapSnapshot('v8')
+Bun.file('heap.json').write(heap)

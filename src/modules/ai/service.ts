@@ -4,7 +4,7 @@ import {
 	ModelMessage,
 	stepCountIs,
 	streamText,
-	type StreamTextOnFinishCallback
+	type GenerateTextOnEndCallback
 } from 'ai'
 import { LRUCache } from 'lru-cache'
 
@@ -18,7 +18,6 @@ import {
 	model,
 	raceFirstTruthy,
 	redis,
-	retry,
 	sql
 } from '@arona/libs'
 import {
@@ -39,7 +38,7 @@ interface AskParams {
 	history: History | undefined
 	references: Reference[]
 	ip: string
-	onFinish?: StreamTextOnFinishCallback<{}>
+	onFinish?: GenerateTextOnEndCallback<{}>
 	think?: boolean
 }
 
@@ -128,7 +127,7 @@ export function ask({
 				// 		: 'low'
 				// }
 			},
-			onFinish(metadata) {
+			onEnd(metadata) {
 				onFinish?.(metadata as any)
 			}
 		})
