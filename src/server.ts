@@ -1,3 +1,5 @@
+const t1 = performance.now()
+
 import { Elysia, file } from 'elysia'
 // import { openapi, fromTypes } from '@elysia/openapi'
 import { cors } from '@elysia/cors'
@@ -8,7 +10,6 @@ import { cors } from '@elysia/cors'
 
 import { ai, pow } from './modules'
 import { isDev, isProduction } from './libs'
-import { generateHeapSnapshot } from 'bun'
 
 export const app = new Elysia({
 	cookie: {
@@ -50,5 +51,4 @@ export const app = new Elysia({
 	.use(ai)
 	.use(pow)
 
-const heap = generateHeapSnapshot('v8')
-Bun.file('heap.json').write(heap)
+console.log(`⏱️  App ready time: ${(performance.now() - t1).toFixed(6)}ms`)
