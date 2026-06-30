@@ -15,8 +15,6 @@ COPY src src
 COPY tsconfig.json tsconfig.json
 COPY scripts/build.ts scripts/build.ts
 
-COPY .env.local .env
-
 ENV NODE_ENV=production
 
 RUN bun run build
