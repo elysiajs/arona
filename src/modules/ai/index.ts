@@ -6,6 +6,7 @@ import {
 	API_KEY,
 	cache,
 	isDev,
+	log,
 	rateLimitMacro,
 	redis,
 	retry,
@@ -46,8 +47,10 @@ export const ai = new Elysia()
 				// 			'Invalid history. Please start a new conversation.'
 				// 		)
 			},
-			error: function* () {
+			error: function* ({ error }) {
 				yield 'Elysia chan is feeling a bit under the weather right now. Please try again later!'
+
+				log(error.message)
 			}
 		},
 		async function* ({
