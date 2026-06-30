@@ -30,8 +30,6 @@ COPY public public
 
 ENV NODE_ENV=production
 
-COPY .env.local .env
-
 CMD ["./server"]
 
 EXPOSE 3000
