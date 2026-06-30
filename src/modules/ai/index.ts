@@ -1,12 +1,11 @@
-import { Elysia } from 'elysia'
-import { startSpan } from '@elysiajs/opentelemetry'
+import { Elysia, prefix } from 'elysia'
+import { startSpan } from '@elysia/opentelemetry'
 
 import { powMacro } from '@arona/modules/pow'
 import {
 	API_KEY,
 	cache,
 	isDev,
-	log,
 	rateLimitMacro,
 	redis,
 	retry,
@@ -19,14 +18,38 @@ import { createCacheKey, deduplicateReferences, SemanticCache } from './libs'
 import { Models, type Reference } from './model'
 
 export const ai = new Elysia()
-	.model(Models)
-	.prefix('model', 'AI.')
+	.model(prefix.capitalize('AI', Models))
 	.decorate({ AI })
 	.use(powMacro)
 	.use(rateLimitMacro)
 	.use(turnstileMacro)
 	.post(
 		'/ask',
+		{
+			body: 'AI.Ask',
+			parse: 'json',
+			turnstile: true,
+			pow: !isDev as true,
+			beforeHandle({ body }) {
+				if (!body.history) return
+
+				if (body.history?.length > 8)
+					body.history = body.history.slice(-8)
+
+				// for (const { content, checksum, role } of body.history)
+				// 	if (
+				// 		role === 'assistant' &&
+				// 		!AI.Checksum.verify(content, checksum)
+				// 	)
+				// 		return status(
+				// 			422,
+				// 			'Invalid history. Please start a new conversation.'
+				// 		)
+			},
+			error: function* () {
+				yield 'Elysia chan is feeling a bit under the weather right now. Please try again later!'
+			}
+		},
 		async function* ({
 			AI,
 			body,
@@ -156,31 +179,6 @@ export const ai = new Elysia()
 				SemanticCache.normalize(message, ip).then((normalized) => {
 					if (normalized) SemanticCache.set(normalized, response)
 				})
-		},
-		{
-			body: 'AI.Ask',
-			parse: 'json',
-			turnstile: true,
-			pow: !isDev as true,
-			beforeHandle({ body, status, AI }) {
-				if (!body.history) return
-
-				if (body.history?.length > 8)
-					body.history = body.history.slice(-8)
-
-				// for (const { content, checksum, role } of body.history)
-				// 	if (
-				// 		role === 'assistant' &&
-				// 		!AI.Checksum.verify(content, checksum)
-				// 	)
-				// 		return status(
-				// 			422,
-				// 			'Invalid history. Please start a new conversation.'
-				// 		)
-			},
-			error: function* () {
-				yield 'Elysia chan is feeling a bit under the weather right now. Please try again later!'
-			}
 		}
 	)
 
@@ -190,18 +188,18 @@ const reIndexSecret = process.env.REINDEX_SECRET
 if (reIndexWebhookEndpoint && reIndexSecret)
 	ai.patch(
 		reIndexWebhookEndpoint,
+		{
+			beforeHandle({ headers, status }) {
+				if (headers['reindex_secret'] !== reIndexSecret)
+					return status(404, 'NOT_FOUND')
+			}
+		},
 		async function* () {
 			yield 'Indexing...'
 
 			await structure()
 
 			yield 'Done'
-		},
-		{
-			beforeHandle({ headers, status }) {
-				if (headers['reindex_secret'] !== reIndexSecret)
-					return status(404, 'NOT_FOUND')
-			}
 		}
 	)
 

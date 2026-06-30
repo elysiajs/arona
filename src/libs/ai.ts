@@ -14,11 +14,14 @@ export const router = createOpenRouter({
 	apiKey: process.env.OPENROUTER_API_KEY
 })
 
+const modelName = process.env.OPENROUTER_MODEL
+if (!modelName) throw new Error('OPENROUTER_MODEL is not set')
+
 const mainProviders = process.env.OPENROUTER_MAIN_PROVIDERS?.split(',').map(
 	(x) => x.trim()
 )
 
-export const model = router('openai/gpt-oss-120b:exacto', {
+export const model = router(modelName, {
 	provider: mainProviders
 		? {
 				only: mainProviders,
@@ -26,7 +29,11 @@ export const model = router('openai/gpt-oss-120b:exacto', {
 			}
 		: undefined
 })
-export const smallModel = router('openai/gpt-oss-20b')
+export const smallModel = router('openai/gpt-oss-20b', {
+	provider: {
+		sort: 'latency'
+	}
+})
 
 // export const groq = createGroq()
 

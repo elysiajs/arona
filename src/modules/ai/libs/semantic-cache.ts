@@ -1,4 +1,4 @@
-import { record } from '@elysiajs/opentelemetry'
+import { record } from '@elysia/opentelemetry'
 import { generateText } from 'ai'
 import { LRUCache } from 'lru-cache'
 

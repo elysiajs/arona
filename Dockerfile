@@ -2,6 +2,9 @@ FROM oven/bun AS build
 
 WORKDIR /app
 
+RUN apt update
+RUN apt install -y git
+
 # Cache packages installation
 COPY package.json package.json
 COPY bun.lock bun.lock
@@ -10,28 +13,24 @@ RUN bun install
 
 COPY src src
 COPY tsconfig.json tsconfig.json
+COPY scripts/build.ts scripts/build.ts
+
+COPY .env.local .env
 
 ENV NODE_ENV=production
 
-RUN apt update
-RUN apt install -y git
-
-RUN bun build \
-	--compile \
-	--target bun-linux-x64 \
-	--minify-whitespace \
-	--minify-syntax \
-	--outfile server \
-	src/index.ts
+RUN bun run build
 
 FROM gcr.io/distroless/base
 
 WORKDIR /app
 
-COPY --from=build /app/server server
+COPY --from=build /app/dist/src server
 COPY public public
 
 ENV NODE_ENV=production
+
+COPY .env.local .env
 
 CMD ["./server"]
 

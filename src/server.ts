@@ -1,8 +1,8 @@
 import { Elysia, file } from 'elysia'
-import { openapi, fromTypes } from '@elysiajs/openapi'
-import { cors } from '@elysiajs/cors'
+import { openapi, fromTypes } from '@elysia/openapi'
+import { cors } from '@elysia/cors'
 
-import { opentelemetry } from '@elysiajs/opentelemetry'
+import { opentelemetry } from '@elysia/opentelemetry'
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-node'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
 
@@ -20,8 +20,8 @@ export const app = new Elysia({
 })
 	.use(
 		openapi({
-			enabled: isDev,
-			references: fromTypes('src/server.ts')
+			enabled: isDev
+			// references: fromTypes('src/server.ts')
 		})
 	)
 	.use(

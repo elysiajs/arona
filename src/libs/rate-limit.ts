@@ -30,24 +30,27 @@ export async function rateLimit(key: string, limit: number, seconds: number) {
 	} as const
 }
 
-export const rateLimitMacro = new Elysia().use(ipMacro).macro('rateLimit', {
-	ip: true,
-	async beforeHandle({ ip, status, set }) {
-		if (isDev) return
+export const rateLimitMacro = new Elysia().use(ipMacro).macro({
+	rateLimit: {
+		ip: true,
+		// @ts-expect-error
+		async beforeHandle({ ip, status, set }) {
+			if (isDev) return
 
-		const limit = await rateLimit(`ip:${ip}`, 10, 35)
-		if (limit.allowed) return
+			const limit = await rateLimit(`ip:${ip}`, 10, 35)
+			if (limit.allowed) return
 
-		set.headers['Retry-After'] = limit.retryAfter / 1000
-		set.headers['X-RateLimit-Limit'] = 11
-		set.headers['X-RateLimit-Remaining'] = 0
-		set.headers['X-RateLimit-Reset'] = Math.ceil(
-			(Date.now() + limit.retryAfter) / 1000
-		)
+			set.headers['Retry-After'] = limit.retryAfter / 1000
+			set.headers['X-RateLimit-Limit'] = 11
+			set.headers['X-RateLimit-Remaining'] = 0
+			set.headers['X-RateLimit-Reset'] = Math.ceil(
+				(Date.now() + limit.retryAfter) / 1000
+			)
 
-		return status(
-			429,
-			`Ratelimit exceeded. Please try again in ${set.headers['Retry-After']} seconds.`
-		)
+			return status(
+				429,
+				`Ratelimit exceeded. Please try again in ${set.headers['Retry-After']} seconds.`
+			)
+		}
 	}
 })
