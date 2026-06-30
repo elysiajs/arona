@@ -1,12 +1,10 @@
-const t1 = performance.now()
-
 import { Elysia, file } from 'elysia'
-// import { openapi, fromTypes } from '@elysia/openapi'
+import { openapi, fromTypes } from '@elysia/openapi'
 import { cors } from '@elysia/cors'
 
-// import { opentelemetry } from '@elysia/opentelemetry'
-// import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-node'
-// import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
+import { opentelemetry } from '@elysia/opentelemetry'
+import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-node'
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
 
 import { ai, pow } from './modules'
 import { isDev, isProduction } from './libs'
@@ -20,27 +18,27 @@ export const app = new Elysia({
 		sign: isProduction ? 'challenge' : undefined
 	}
 })
-	// .use(
-	// 	openapi({
-	// 		enabled: isDev,
-	// 		references: fromTypes('src/server.ts')
-	// 	})
-	// )
-	// .use(
-	// 	opentelemetry({
-	// 		spanProcessors: [
-	// 			new BatchSpanProcessor(
-	// 				new OTLPTraceExporter({
-	// 					url: 'https://api.axiom.co/v1/traces',
-	// 					headers: {
-	// 						Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
-	// 						'X-Axiom-Dataset': process.env.AXIOM_DATASET!
-	// 					}
-	// 				})
-	// 			)
-	// 		]
-	// 	})
-	// )
+	.use(
+		openapi({
+			enabled: isDev
+			// references: fromTypes('src/server.ts')
+		})
+	)
+	.use(
+		opentelemetry({
+			spanProcessors: [
+				new BatchSpanProcessor(
+					new OTLPTraceExporter({
+						url: 'https://api.axiom.co/v1/traces',
+						headers: {
+							Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
+							'X-Axiom-Dataset': process.env.AXIOM_DATASET!
+						}
+					})
+				)
+			]
+		})
+	)
 	.use(
 		cors({
 			origin: ['http://localhost:5173', 'https://elysiajs.com']
@@ -50,5 +48,3 @@ export const app = new Elysia({
 	.get('/heath', 'ok')
 	.use(ai)
 	.use(pow)
-
-console.log(`⏱️  App ready time: ${(performance.now() - t1).toFixed(6)}ms`)

@@ -1,12 +1,11 @@
 import { Elysia, prefix } from 'elysia'
-import { startSpan } from '@elysiajs/opentelemetry'
+import { startSpan } from '@elysia/opentelemetry'
 
 import { powMacro } from '@arona/modules/pow'
 import {
 	API_KEY,
 	cache,
 	isDev,
-	log,
 	rateLimitMacro,
 	redis,
 	retry,
@@ -31,7 +30,7 @@ export const ai = new Elysia()
 			parse: 'json',
 			turnstile: true,
 			pow: !isDev as true,
-			beforeHandle({ body, status, AI }) {
+			beforeHandle({ body }) {
 				if (!body.history) return
 
 				if (body.history?.length > 8)

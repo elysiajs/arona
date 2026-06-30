@@ -1,4 +1,4 @@
-import { record } from '@elysiajs/opentelemetry'
+import { record } from '@elysia/opentelemetry'
 
 import { redis } from './redis'
 import { log } from './log'

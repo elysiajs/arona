@@ -8,7 +8,7 @@ import {
 } from 'ai'
 import { LRUCache } from 'lru-cache'
 
-import { record, setAttributes } from '@elysiajs/opentelemetry'
+import { record, setAttributes } from '@elysia/opentelemetry'
 
 import {
 	BurstCache,
