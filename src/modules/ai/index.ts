@@ -127,22 +127,20 @@ export const ai = new Elysia()
 			const iterator = stream[Symbol.asyncIterator]()
 			const IDLE = Symbol()
 			let pending = iterator.next()
-			let delay = 5000
 			let filled = false
 
 			while (true) {
 				let timer!: ReturnType<typeof setTimeout>
 				const idle = new Promise<typeof IDLE>((resolve) => {
-					timer = setTimeout(() => resolve(IDLE), delay)
+					timer = setTimeout(() => resolve(IDLE), 2000)
 				})
 
 				const result = await Promise.race([pending, idle])
 				clearTimeout(timer)
 
 				if (result === IDLE) {
-					yield filled ? '...' : '.'
+					yield filled ? '.' : '...'
 					filled = true
-					delay = 2000
 					continue
 				}
 
@@ -156,7 +154,6 @@ export const ai = new Elysia()
 				response += result.value
 				yield result.value
 				pending = iterator.next()
-				delay = 5000
 			}
 			streamSpan.end()
 
