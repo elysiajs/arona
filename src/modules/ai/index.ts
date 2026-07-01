@@ -127,7 +127,7 @@ export const ai = new Elysia()
 			const iterator = stream[Symbol.asyncIterator]()
 			const IDLE = Symbol()
 			let pending = iterator.next()
-			let delay = 6000
+			let delay = 5000
 			let filled = false
 
 			while (true) {
@@ -140,7 +140,7 @@ export const ai = new Elysia()
 				clearTimeout(timer)
 
 				if (result === IDLE) {
-					yield '...'
+					yield filled ? '...' : '.'
 					filled = true
 					delay = 2000
 					continue
@@ -156,7 +156,7 @@ export const ai = new Elysia()
 				response += result.value
 				yield result.value
 				pending = iterator.next()
-				delay = 6000
+				delay = 5000
 			}
 			streamSpan.end()
 
