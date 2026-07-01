@@ -39,6 +39,8 @@ interface AskParams {
 	references: Reference[]
 	ip: string
 	onFinish?: GenerateTextOnEndCallback<{}>
+	onToolStart?: () => void
+	onToolEnd?: () => void
 	think?: boolean
 }
 
@@ -50,6 +52,8 @@ export function ask({
 	references,
 	ip,
 	onFinish,
+	onToolStart,
+	onToolEnd,
 	think
 }: AskParams) {
 	const searchTool = createSearchTool(references)
@@ -127,6 +131,8 @@ export function ask({
 				// 		: 'low'
 				// }
 			},
+			onToolExecutionStart: onToolStart,
+			onToolExecutionEnd: onToolEnd,
 			onEnd(metadata) {
 				onFinish?.(metadata as any)
 			}

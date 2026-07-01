@@ -84,6 +84,9 @@ export const ai = new Elysia()
 						)
 				})
 
+			let toolRunning = 0
+			let wake: (() => void) | null = null
+
 			const stream = AI.ask({
 				abortSignal: request.signal,
 				seed,
@@ -91,6 +94,13 @@ export const ai = new Elysia()
 				history,
 				references,
 				ip,
+				onToolStart() {
+					toolRunning++
+					wake?.()
+				},
+				onToolEnd() {
+					toolRunning = Math.max(0, toolRunning - 1)
+				},
 				think:
 					message.includes('```') || message.length > 1024
 						? true
@@ -131,12 +141,17 @@ export const ai = new Elysia()
 
 			while (true) {
 				let timer!: ReturnType<typeof setTimeout>
-				const idle = new Promise<typeof IDLE>((resolve) => {
-					timer = setTimeout(() => resolve(IDLE), 2000)
+				const beat = new Promise<typeof IDLE>((resolve) => {
+					wake = () => resolve(IDLE)
+					timer = setTimeout(
+						() => resolve(IDLE),
+						toolRunning ? 2000 : 5000
+					)
 				})
 
-				const result = await Promise.race([pending, idle])
+				const result = await Promise.race([pending, beat])
 				clearTimeout(timer)
+				wake = null
 
 				if (result === IDLE) {
 					yield filled ? '.' : '...'
