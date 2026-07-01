@@ -123,9 +123,40 @@ export const ai = new Elysia()
 			let response = ''
 
 			const streamSpan = startSpan('Stream')
-			for await (const chunk of stream) {
-				response += chunk
-				yield chunk
+
+			const iterator = stream[Symbol.asyncIterator]()
+			const IDLE = Symbol()
+			let pending = iterator.next()
+			let delay = 6000
+			let filled = false
+
+			while (true) {
+				let timer!: ReturnType<typeof setTimeout>
+				const idle = new Promise<typeof IDLE>((resolve) => {
+					timer = setTimeout(() => resolve(IDLE), delay)
+				})
+
+				const result = await Promise.race([pending, idle])
+				clearTimeout(timer)
+
+				if (result === IDLE) {
+					yield '...'
+					filled = true
+					delay = 2000
+					continue
+				}
+
+				if (result.done) break
+
+				if (filled) {
+					yield '\n\n'
+					filled = false
+				}
+
+				response += result.value
+				yield result.value
+				pending = iterator.next()
+				delay = 6000
 			}
 			streamSpan.end()
 
