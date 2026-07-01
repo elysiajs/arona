@@ -145,7 +145,7 @@ export const ai = new Elysia()
 					wake = () => resolve(IDLE)
 					timer = setTimeout(
 						() => resolve(IDLE),
-						toolRunning ? 2000 : 5000
+						5000
 					)
 				})
 
