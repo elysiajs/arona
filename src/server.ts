@@ -1,10 +1,10 @@
 import { Elysia, file } from 'elysia'
-import { openapi, fromTypes } from '@elysia/openapi'
+// import { openapi, fromTypes } from '@elysia/openapi'
 import { cors } from '@elysia/cors'
 
-import { opentelemetry } from '@elysia/opentelemetry'
-import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-node'
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
+// import { opentelemetry } from '@elysia/opentelemetry'
+// import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-node'
+// import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
 
 import { ai, pow } from './modules'
 import { isDev, isProduction } from './libs'
@@ -18,12 +18,12 @@ export const app = new Elysia({
 		sign: isProduction ? 'challenge' : undefined
 	}
 })
-	.use(
-		openapi({
-			enabled: isDev
-			// references: fromTypes('src/server.ts')
-		})
-	)
+	// .use(
+	// 	openapi({
+	// 		enabled: isDev
+	// 		// references: fromTypes('src/server.ts')
+	// 	})
+	// )
 	// .use(
 	// 	opentelemetry({
 	// 		spanProcessors: [
@@ -48,11 +48,3 @@ export const app = new Elysia({
 	.get('/heath', 'ok')
 	.use(ai)
 	.use(pow)
-
-console.log(
-	app.history?.findIndex(
-		([method, path]) => path === '/ask'
-	)
-)
-
-console.log(app.handler(6, true).toString())
