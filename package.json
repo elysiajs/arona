@@ -20,7 +20,7 @@
 		"@opentelemetry/sdk-trace-node": "^2.8.0",
 		"ai": "^7.0.5",
 		"axiom": "^0.52.2",
-		"elysia": "2.0.0-exp.23",
+		"elysia": "2.0.0-exp.39",
 		"evlog": "^2.19.2",
 		"ioredis": "^5.11.1",
 		"lru-cache": "^11.5.1",
