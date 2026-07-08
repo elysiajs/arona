@@ -33,7 +33,6 @@ export async function rateLimit(key: string, limit: number, seconds: number) {
 export const rateLimitMacro = new Elysia().use(ipMacro).macro({
 	rateLimit: {
 		ip: true,
-		// @ts-expect-error
 		async beforeHandle({ ip, status, set }) {
 			if (isDev) return
 
