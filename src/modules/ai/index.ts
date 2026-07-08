@@ -3,7 +3,6 @@ import { startSpan } from '@elysia/opentelemetry'
 
 import { powMacro } from '@arona/modules/pow'
 import {
-	API_KEY,
 	cache,
 	isDev,
 	log,
@@ -143,10 +142,7 @@ export const ai = new Elysia()
 				let timer!: ReturnType<typeof setTimeout>
 				const beat = new Promise<typeof IDLE>((resolve) => {
 					wake = () => resolve(IDLE)
-					timer = setTimeout(
-						() => resolve(IDLE),
-						5000
-					)
+					timer = setTimeout(() => resolve(IDLE), 5000)
 				})
 
 				const result = await Promise.race([pending, beat])

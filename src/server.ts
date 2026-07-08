@@ -24,21 +24,21 @@ export const app = new Elysia({
 			// references: fromTypes('src/server.ts')
 		})
 	)
-	.use(
-		opentelemetry({
-			spanProcessors: [
-				new BatchSpanProcessor(
-					new OTLPTraceExporter({
-						url: 'https://api.axiom.co/v1/traces',
-						headers: {
-							Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
-							'X-Axiom-Dataset': process.env.AXIOM_DATASET!
-						}
-					})
-				)
-			]
-		})
-	)
+	// .use(
+	// 	opentelemetry({
+	// 		spanProcessors: [
+	// 			new BatchSpanProcessor(
+	// 				new OTLPTraceExporter({
+	// 					url: 'https://api.axiom.co/v1/traces',
+	// 					headers: {
+	// 						Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
+	// 						'X-Axiom-Dataset': process.env.AXIOM_DATASET!
+	// 					}
+	// 				})
+	// 			)
+	// 		]
+	// 	})
+	// )
 	.use(
 		cors({
 			origin: ['http://localhost:5173', 'https://elysiajs.com']
@@ -48,3 +48,11 @@ export const app = new Elysia({
 	.get('/heath', 'ok')
 	.use(ai)
 	.use(pow)
+
+console.log(
+	app.history?.findIndex(
+		([method, path]) => path === '/ask'
+	)
+)
+
+console.log(app.handler(6, true).toString())
