@@ -1,11 +1,11 @@
-import { aot } from 'elysia/plugin/bun'
+import { aot } from 'elysia/plugin/aot/bun'
 
 Bun.build({
 	entrypoints: ['src/index.ts'],
 	outdir: 'dist',
 	target: 'bun',
-	compile: true,
-	minify: true,
+	// compile: true,
+	// minify: true,
 	// minify: {
 	// 	whitespace: true,
 	// 	syntax: true,

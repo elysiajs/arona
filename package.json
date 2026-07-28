@@ -12,6 +12,7 @@
 		"@ai-sdk/cerebras": "^3.0.1",
 		"@ai-sdk/groq": "^4.0.1",
 		"@ai-sdk/openai": "^4.0.3",
+		"@ai-sdk/valibot": "^3.0.6",
 		"@elysia/cors": "^2.0.0-exp.0",
 		"@elysia/openapi": "^2.0.0-exp.1",
 		"@elysia/opentelemetry": "^2.0.0-exp.0",
@@ -20,12 +21,12 @@
 		"@opentelemetry/sdk-trace-node": "^2.8.0",
 		"ai": "^7.0.5",
 		"axiom": "^0.52.2",
-		"elysia": "2.0.0-exp.40",
+		"elysia": "2.0.0-exp.59",
 		"evlog": "^2.19.2",
 		"ioredis": "^5.11.1",
 		"lru-cache": "^11.5.1",
 		"pino-opentelemetry-transport": "^3.0.0",
-		"zod": "^4.4.3"
+		"valibot": "^1.4.2"
 	},
 	"devDependencies": {
 		"@bogeychan/elysia-logger": "^0.1.10",

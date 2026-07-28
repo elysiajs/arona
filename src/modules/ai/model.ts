@@ -1,11 +1,11 @@
 import { t, type UnwrapSchema } from 'elysia'
-import z from 'zod'
+import * as v from 'valibot'
 
 export const Models = {
-	history: z.array(
-		z.object({
-			role: z.literal('user').or(z.literal('assistant')),
-			content: z.string().max(8192)
+	history: v.array(
+		v.object({
+			role: v.picklist(['user', 'assistant']),
+			content: v.pipe(v.string(), v.maxLength(8192))
 		})
 	),
 	ask: t.Object({
@@ -30,21 +30,31 @@ export const Models = {
 			)
 		)
 	}),
-	reference: z.object({
-		title: z.string(),
-		score: z.number(),
-		summary: z.string().meta({
-			description: 'Part of the content retrieved from the page',
-		}),
-		link: z.string().meta({
-			description: 'The link of the page to read to read when content is missing or not enough',
-			examples: ['essential/life-cycle']
-		})
+	reference: v.object({
+		title: v.string(),
+		score: v.number(),
+		summary: v.pipe(
+			v.string(),
+			v.metadata({
+				description: 'Part of the content retrieved from the page'
+			})
+		),
+		link: v.pipe(
+			v.string(),
+			v.metadata({
+				description:
+					'The link of the page to read to read when content is missing or not enough',
+				examples: ['essential/life-cycle']
+			})
+		)
 	}),
 	get references() {
-		return this.reference.or(z.array(this.reference)).nullable().meta({
-			description: 'References retrieved from the page'
-		})
+		return v.pipe(
+			v.nullable(v.union([this.reference, v.array(this.reference)])),
+			v.metadata({
+				description: 'References retrieved from the page'
+			})
+		)
 	}
 }
 

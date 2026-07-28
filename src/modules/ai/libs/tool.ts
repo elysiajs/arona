@@ -1,23 +1,29 @@
 import { tool } from 'ai'
-import * as z from 'zod'
+import * as v from 'valibot'
 
 import { retry, log, cache, model, tableOfContents } from '@arona/libs'
 
 import { History, Models, type Reference } from '../model'
 import { normalizePage } from './utils'
 import { search, readPage } from '../service'
+import { valibotSchema } from '@ai-sdk/valibot'
 
 export const createSearchTool = (references: Reference[]) =>
 	tool({
 		description:
 			"Search relevant information from Elysia documentation. No need to specify 'Elysia' as keyword. Content is only some part of a page, use 'read_page' tool with 'link' to read full content. This tool is deterministic, don't call with the same parameters twice",
-		inputSchema: z.object({
-			sentence: z.string().meta({
-				description: 'The keyword/sentence to search',
-				examples: ['handler', 'OpenAPI type gen', 'Eden Treaty']
+		inputSchema: valibotSchema(
+			v.object({
+				sentence: v.pipe(
+					v.string(),
+					v.metadata({
+						description: 'The keyword/sentence to search',
+						examples: ['handler', 'OpenAPI type gen', 'Eden Treaty']
+					})
+				)
 			})
-		}),
-		outputSchema: Models.references,
+		),
+		outputSchema: valibotSchema(Models.references),
 		async execute({ sentence }) {
 			log('Search:', sentence)
 
@@ -43,13 +49,21 @@ export const createSearchTool = (references: Reference[]) =>
 export const createPageTool = (references: Reference[]) =>
 	tool({
 		description: `Read a specific page from Elysia documentation with in detail. This tool is deterministic, don't call with the same parameters twice`,
-		inputSchema: z.object({
-			link: z.string().meta({
-				description: 'The link of the page to read',
-				examples: ['patterns/openapi', 'essential/life-cycle#transform']
+		inputSchema: valibotSchema(
+			v.object({
+				link: v.pipe(
+					v.string(),
+					v.metadata({
+						description: 'The link of the page to read',
+						examples: [
+							'patterns/openapi',
+							'essential/life-cycle#transform'
+						]
+					})
+				)
 			})
-		}),
-		outputSchema: Models.references,
+		),
+		outputSchema: valibotSchema(Models.references),
 		async execute({ link }) {
 			link = normalizePage(link)
 
@@ -71,8 +85,8 @@ export const createPageTool = (references: Reference[]) =>
 export const tableOfContentsTool = tool({
 	description:
 		'List all available Elysia documents. Call "read_page" tool with link to read the page',
-	inputSchema: z.object({}),
-	outputSchema: z.string(),
+	inputSchema: valibotSchema(v.object({})),
+	outputSchema: valibotSchema(v.string()),
 	execute: () => tableOfContents
 })
 
@@ -80,7 +94,7 @@ export const createHistoryTool = (execute: () => History) =>
 	tool({
 		description:
 			'Read conversation history. Call this tool when you think you are missing user context',
-		inputSchema: z.object({}),
-		outputSchema: Models.history,
+		inputSchema: valibotSchema(v.object({})),
+		outputSchema: valibotSchema(Models.history),
 		execute
 	})
