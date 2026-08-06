@@ -1,4 +1,4 @@
-FROM oven/bun AS build
+FROM oven/bun:canary AS build
 
 WORKDIR /app
 
@@ -16,8 +16,6 @@ COPY tsconfig.json tsconfig.json
 COPY scripts/build.ts scripts/build.ts
 
 ENV NODE_ENV=production
-
-RUN bun upgrade --canary
 
 RUN bun run build
 
