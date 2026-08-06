@@ -5,7 +5,10 @@ import { isProduction, structure } from './libs'
 import { app } from './server'
 
 if (isProduction && cluster.isPrimary) {
-	const parallel = availableParallelism() - 1
+	const env = process.env
+	const requestedCPUs = !isNaN(+env?.PARALLEL) && +env?.PARALLEL
+	const parallel = requestedCPUs || availableParallelism() - 1
+
 	for (let i = 0; i < parallel; i++) cluster.fork()
 
 	Bun.cron('0 */12 * * *', structure)
