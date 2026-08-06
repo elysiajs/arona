@@ -4,8 +4,8 @@ Bun.build({
 	entrypoints: ['src/index.ts'],
 	outdir: 'dist',
 	target: 'bun',
-	//compile: true,
-//	minify: true,
+	compile: true,
+	minify: true,
 	// minify: {
 	// 	whitespace: true,
 	// 	syntax: true,
