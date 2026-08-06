@@ -17,6 +17,8 @@ COPY scripts/build.ts scripts/build.ts
 
 ENV NODE_ENV=production
 
+RUN bun upgrade --canary
+
 RUN bun run build
 
 FROM gcr.io/distroless/base
