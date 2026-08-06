@@ -1,11 +1,12 @@
 import { t, type UnwrapSchema } from 'elysia'
-import * as v from 'valibot'
 
 export const Models = {
-	history: v.array(
-		v.object({
-			role: v.picklist(['user', 'assistant']),
-			content: v.pipe(v.string(), v.maxLength(8192))
+	history: t.Array(
+		t.Object({
+			role: t.UnionEnum(['user', 'assistant']),
+			content: t.String({
+				maxLength: 8192
+			})
 		})
 	),
 	ask: t.Object({
@@ -30,30 +31,24 @@ export const Models = {
 			)
 		)
 	}),
-	reference: v.object({
-		title: v.string(),
-		score: v.number(),
-		summary: v.pipe(
-			v.string(),
-			v.metadata({
-				description: 'Part of the content retrieved from the page'
-			})
-		),
-		link: v.pipe(
-			v.string(),
-			v.metadata({
-				description:
-					'The link of the page to read to read when content is missing or not enough',
-				examples: ['essential/life-cycle']
-			})
-		)
+	reference: t.Object({
+		title: t.String(),
+		score: t.Number(),
+		summary: t.String({
+			description: 'Part of the content retrieved from the page'
+		}),
+		link: t.String({
+			description:
+				'The link of the page to read to read when content is missing or not enough',
+			examples: ['essential/life-cycle']
+		})
 	}),
 	get references() {
-		return v.pipe(
-			v.nullable(v.union([this.reference, v.array(this.reference)])),
-			v.metadata({
+		return t.Union(
+			[this.reference, t.Array(this.reference), t.Null()],
+			{
 				description: 'References retrieved from the page'
-			})
+			}
 		)
 	}
 }

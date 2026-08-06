@@ -1,18 +1,10 @@
-import { createOpenAI } from '@ai-sdk/openai'
-import { createOpenRouter } from '@openrouter/ai-sdk-provider'
-// import { createGroq } from '@ai-sdk/groq'
-// import { createCerebras } from '@ai-sdk/cerebras'
+import { retry } from './retry'
 
 const oaiKey = process.env.OPENAI_API_KEY
 if (!oaiKey) throw new Error('OPENAI_API_KEY is not set')
 
-export const openai = createOpenAI({
-	apiKey: oaiKey
-})
-
-export const router = createOpenRouter({
-	apiKey: process.env.OPENROUTER_API_KEY
-})
+const openRouterKey = process.env.OPENROUTER_API_KEY
+if (!openRouterKey) throw new Error('OPENROUTER_API_KEY is not set')
 
 const modelName = process.env.OPENROUTER_MODEL
 if (!modelName) throw new Error('OPENROUTER_MODEL is not set')
@@ -21,28 +13,357 @@ const mainProviders = process.env.OPENROUTER_MAIN_PROVIDERS?.split(',').map(
 	(x) => x.trim()
 )
 
-export const model = router(modelName, {
+export interface Model {
+	model: string
+	provider?: Record<string, unknown>
+}
+
+export const model = {
+	model: modelName,
 	provider: mainProviders
 		? {
 				only: mainProviders,
 				order: mainProviders
 			}
 		: undefined
-})
-export const smallModel = router('openai/gpt-oss-20b', {
+} satisfies Model
+
+export const smallModel = {
+	model: 'openai/gpt-oss-20b',
 	provider: {
 		sort: 'latency'
 	}
+} satisfies Model
+
+export type ReasoningEffort = 'minimal' | 'low' | 'medium' | 'high'
+
+export interface ToolCall {
+	id: string
+	type: 'function'
+	function: {
+		name: string
+		arguments: string
+	}
+}
+
+export interface ChatMessage {
+	role: 'system' | 'user' | 'assistant' | 'tool'
+	content: string
+	tool_calls?: ToolCall[]
+	tool_call_id?: string
+}
+
+export interface Tool {
+	description: string
+	/** JSON Schema of the tool input */
+	parameters: Record<string, unknown>
+	execute(input: any): unknown
+}
+
+export async function getEmbeddings(input: string[]): Promise<number[][]> {
+	const response = await fetch('https://api.openai.com/v1/embeddings', {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${oaiKey}`
+		},
+		body: JSON.stringify({
+			model: 'text-embedding-3-small',
+			input
+		})
+	})
+
+	if (!response.ok)
+		throw new Error(
+			`OpenAI embeddings ${response.status}: ${await response.text()}`
+		)
+
+	const { data } = (await response.json()) as {
+		data: { embedding: number[] }[]
+	}
+
+	return data.map((x) => x.embedding)
+}
+
+interface CompletionOptions {
+	model: Model
+	system?: string
+	temperature?: number
+	topP?: number
+	presencePenalty?: number
+	maxOutputTokens?: number
+	seed?: number
+	/** end-user id forwarded to the provider */
+	user?: string
+	reasoningEffort?: ReasoningEffort
+	abortSignal?: AbortSignal
+}
+
+const completionBody = ({
+	model,
+	temperature,
+	topP,
+	presencePenalty,
+	maxOutputTokens,
+	seed,
+	user,
+	reasoningEffort
+}: CompletionOptions) => ({
+	...model,
+	temperature,
+	top_p: topP,
+	presence_penalty: presencePenalty,
+	max_tokens: maxOutputTokens,
+	seed,
+	user,
+	reasoning: reasoningEffort ? { effort: reasoningEffort } : undefined
 })
 
-// export const groq = createGroq()
+const chatCompletion = (body: unknown, signal?: AbortSignal) =>
+	fetch('https://openrouter.ai/api/v1/chat/completions', {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${openRouterKey}`
+		},
+		body: JSON.stringify(body),
+		signal
+	}).then(async (response) => {
+		if (!response.ok)
+			throw new Error(
+				`OpenRouter ${response.status}: ${await response.text()}`
+			)
 
-// export const model = groq('openai/gpt-oss-120b')
-// export const smallModel = groq('openai/gpt-oss-20b')
+		return response
+	})
 
-// export const cerebras = createCerebras()
-// export const model = cerebras('gpt-oss-120b')
-// export const model = cerebras('gpt-oss-20b')
+export async function generateText(
+	options: CompletionOptions & { prompt: string }
+): Promise<string> {
+	const response = await chatCompletion(
+		{
+			...completionBody(options),
+			messages: [
+				...(options.system
+					? [{ role: 'system', content: options.system }]
+					: []),
+				{ role: 'user', content: options.prompt }
+			]
+		},
+		options.abortSignal
+	)
+
+	const json = (await response.json()) as {
+		choices?: { message?: { content?: string } }[]
+	}
+
+	return json.choices?.[0]?.message?.content ?? ''
+}
+
+async function* sse(response: Response) {
+	const decoder = new TextDecoder()
+	let buffer = ''
+
+	for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) {
+		buffer += decoder.decode(chunk, { stream: true })
+
+		let index
+		while ((index = buffer.indexOf('\n')) !== -1) {
+			const line = buffer.slice(0, index).trim()
+			buffer = buffer.slice(index + 1)
+
+			if (!line.startsWith('data:')) continue
+
+			const data = line.slice(5).trim()
+			if (data === '[DONE]') return
+
+			yield JSON.parse(data) as {
+				error?: { message?: string }
+				usage?: {
+					prompt_tokens?: number
+					completion_tokens?: number
+					total_tokens?: number
+					prompt_tokens_details?: { cached_tokens?: number }
+					completion_tokens_details?: { reasoning_tokens?: number }
+				}
+				choices?: {
+					delta?: {
+						content?: string
+						reasoning?: string
+						tool_calls?: {
+							index: number
+							id?: string
+							function?: { name?: string; arguments?: string }
+						}[]
+					}
+				}[]
+			}
+		}
+	}
+}
+
+export interface StreamUsage {
+	inputTokens: number
+	cachedInputTokens: number
+	outputTokens: number
+	reasoningTokens: number
+	totalTokens: number
+}
+
+export interface StreamTextResult {
+	text: string
+	reasoning: string[]
+	usage: StreamUsage
+}
+
+export interface StreamTextOptions extends CompletionOptions {
+	system: string
+	messages: ChatMessage[]
+	tools: Record<string, Tool>
+	/** total request rounds, the last one runs without tools to force an answer */
+	maxSteps: number
+	/** checked before each round, true stops offering tools */
+	stopWhen?: () => boolean
+	onToolStart?: () => void
+	onToolEnd?: () => void
+	onFinish?: (result: StreamTextResult) => void
+}
+
+export async function* streamText(
+	options: StreamTextOptions
+): AsyncGenerator<string> {
+	const messages: ChatMessage[] = [
+		{ role: 'system', content: options.system },
+		...options.messages
+	]
+
+	const toolDefinitions = Object.entries(options.tools).map(
+		([name, tool]) => ({
+			type: 'function',
+			function: {
+				name,
+				description: tool.description,
+				parameters: tool.parameters
+			}
+		})
+	)
+
+	let text = ''
+	const reasoning: string[] = []
+	const usage: StreamUsage = {
+		inputTokens: 0,
+		cachedInputTokens: 0,
+		outputTokens: 0,
+		reasoningTokens: 0,
+		totalTokens: 0
+	}
+
+	try {
+		for (let step = 0; step < options.maxSteps; step++) {
+			const withTools =
+				step < options.maxSteps - 1 && !options.stopWhen?.()
+
+			const response = await retry(
+				() =>
+					chatCompletion(
+						{
+							...completionBody(options),
+							messages,
+							tools: withTools ? toolDefinitions : undefined,
+							stream: true,
+							usage: { include: true }
+						},
+						options.abortSignal
+					),
+				3,
+				500
+			)
+
+			let stepText = ''
+			let stepReasoning = ''
+			const toolCalls: ToolCall[] = []
+
+			for await (const chunk of sse(response)) {
+				if (chunk.error)
+					throw new Error(chunk.error.message ?? 'Provider error')
+
+				if (chunk.usage) {
+					usage.inputTokens += chunk.usage.prompt_tokens ?? 0
+					usage.cachedInputTokens +=
+						chunk.usage.prompt_tokens_details?.cached_tokens ?? 0
+					usage.outputTokens += chunk.usage.completion_tokens ?? 0
+					usage.reasoningTokens +=
+						chunk.usage.completion_tokens_details
+							?.reasoning_tokens ?? 0
+					usage.totalTokens += chunk.usage.total_tokens ?? 0
+				}
+
+				const delta = chunk.choices?.[0]?.delta
+				if (!delta) continue
+
+				if (delta.reasoning) stepReasoning += delta.reasoning
+
+				if (delta.content) {
+					stepText += delta.content
+					yield delta.content
+				}
+
+				for (const call of delta.tool_calls ?? []) {
+					const accumulated = (toolCalls[call.index] ??= {
+						id: '',
+						type: 'function',
+						function: { name: '', arguments: '' }
+					})
+
+					if (call.id) accumulated.id = call.id
+					if (call.function?.name)
+						accumulated.function.name += call.function.name
+					if (call.function?.arguments)
+						accumulated.function.arguments +=
+							call.function.arguments
+				}
+			}
+
+			text += stepText
+			if (stepReasoning) reasoning.push(stepReasoning)
+
+			if (!toolCalls.length) break
+
+			messages.push({
+				role: 'assistant',
+				content: stepText,
+				tool_calls: toolCalls
+			})
+
+			for (const call of toolCalls) {
+				options.onToolStart?.()
+
+				let result: unknown
+				try {
+					result = await options.tools[
+						call.function.name
+					]?.execute(JSON.parse(call.function.arguments || '{}'))
+				} catch (error) {
+					result = { error: String(error) }
+				}
+
+				options.onToolEnd?.()
+
+				messages.push({
+					role: 'tool',
+					tool_call_id: call.id,
+					content: JSON.stringify(result ?? null)
+				})
+			}
+		}
+	} catch (error) {
+		if (options.abortSignal?.aborted) return
+
+		throw error
+	}
+
+	options.onFinish?.({ text, reasoning, usage })
+}
 
 export const tableOfContents = `
 ## Table of Contents

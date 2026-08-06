@@ -1,10 +1,63 @@
 import { SQL } from 'bun'
-import { rmdir, stat } from 'fs/promises'
 
-import { embedMany, generateText } from 'ai'
 import Queue from 'p-queue'
 
-import { openai, retry, sql, log, model } from '@arona/libs'
+import { generateText, getEmbeddings, retry, sql, log, model } from '@arona/libs'
+
+/**
+ * Download the documentation repo as a tarball and extract markdown in memory.
+ * No git/tar binary or disk writes, so it works on distroless.
+ *
+ * Keys match the previous git clone + glob paths, e.g. 'docs/essential/route.md'
+ */
+// ponytail: whole tarball is buffered in memory (~repo size), stream-decompress if it ever matters
+export async function fetchDocumentation(): Promise<Map<string, string>> {
+	const response = await fetch(
+		'https://github.com/elysiajs/documentation/archive/refs/heads/main.tar.gz'
+	)
+
+	if (!response.ok)
+		throw new Error(`Failed to download documentation: ${response.status}`)
+
+	const tar = Bun.gunzipSync(await response.arrayBuffer())
+	const decoder = new TextDecoder()
+	const files = new Map<string, string>()
+
+	const field = (from: number, to: number) =>
+		decoder.decode(tar.subarray(from, to)).replace(/\0.*$/s, '')
+
+	// pax extended header may carry a long path for the entry that follows
+	let paxPath: string | undefined
+
+	for (let offset = 0; offset + 512 <= tar.length; ) {
+		const name = field(offset, offset + 100)
+		if (!name) break // empty block marks end of archive
+
+		const size =
+			parseInt(field(offset + 124, offset + 136).trim(), 8) || 0
+		const type = tar[offset + 156]
+		const prefix = field(offset + 345, offset + 500)
+		const data = tar.subarray(offset + 512, offset + 512 + size)
+
+		offset += 512 + Math.ceil(size / 512) * 512
+
+		if (type === 120 /* 'x' pax header */) {
+			paxPath = decoder.decode(data).match(/\d+ path=(.*)\n/)?.[1]
+			continue
+		}
+
+		if (type !== 48 && type !== 0) continue // regular files only
+
+		// strip the '<repo>-main/' root directory
+		let path = paxPath ?? (prefix ? `${prefix}/${name}` : name)
+		path = path.slice(path.indexOf('/') + 1)
+		paxPath = undefined
+
+		if (path.endsWith('.md')) files.set(path, decoder.decode(data))
+	}
+
+	return files
+}
 
 const url = process.env.DATABASE_URL
 if (!url) throw new Error('DATABASE_URL is not set')
@@ -67,19 +120,6 @@ export const structure = async () => {
 
 	log('Database structure setup completed')
 
-	if (process.env.NODE_ENV === 'production') {
-		if (
-			await stat('docs')
-				.then((x) => x.isDirectory())
-				.catch(() => false)
-		)
-			await rmdir('docs', { recursive: true }).catch(() => {})
-	}
-
-	await Bun.$`git clone --depth 1 --single-branch --branch main https://github.com/elysiajs/documentation docs`.catch(
-		() => {}
-	)
-
 	interface Chunk {
 		file: string
 		title: string
@@ -88,11 +128,11 @@ export const structure = async () => {
 
 	const fileToSequence: Record<string, number> = {}
 
-	const markdownsGlob = new Bun.Glob('docs/**/*.md')
-	const ops = <Promise<Chunk>[]>[]
+	const markdowns = <Chunk[]>[]
 
-	for await (const markdown of markdownsGlob.scan('./docs')) {
+	for (const [markdown, content] of await fetchDocumentation()) {
 		if (
+			!markdown.startsWith('docs/') ||
 			markdown === 'docs/index.md' ||
 			markdown.includes('/playground') ||
 			markdown.includes('/docs/migrate/index.md') ||
@@ -103,31 +143,21 @@ export const structure = async () => {
 		)
 			continue
 
-		ops.push(
-			new Promise(async (resolve) => {
-				const file = `docs/${markdown}`
-				const content = await Bun.file(file).text()
-				const title =
-					content
-						.match(/title: (.*)/g)?.[0]
-						?.replace('title: ', '') ||
-					markdown.slice(markdown.lastIndexOf('/'))
+		const title =
+			content.match(/title: (.*)/g)?.[0]?.replace('title: ', '') ||
+			markdown.slice(markdown.lastIndexOf('/'))
 
-				resolve({
-					title,
-					file: markdown,
-					content: content
-						.slice(content.indexOf('---', 3) + 3)
-						.replace(/<script setup(.*)<\/script>/gs, '')
-						.replace(/<Playground[^>]*?\/>/gs, '')
-						.replace(/<Deck>.*?<\/Deck>/gs, '')
-						.trim()
-				})
-			})
-		)
+		markdowns.push({
+			title,
+			file: markdown,
+			content: content
+				.slice(content.indexOf('---', 3) + 3)
+				.replace(/<script setup(.*)<\/script>/gs, '')
+				.replace(/<Playground[^>]*?\/>/gs, '')
+				.replace(/<Deck>.*?<\/Deck>/gs, '')
+				.trim()
+		})
 	}
-
-	const markdowns = await Promise.all(ops)
 
 	const apiKey = process.env.OPENAI_API_KEY
 	if (!apiKey) throw new Error('OPENAI_API_KEY is not set')
@@ -248,20 +278,17 @@ export const structure = async () => {
 				chapters.map((a) => a.link)
 			)
 
-			const { embeddings } = await embedMany({
-				model: openai.embeddingModel('text-embedding-3-small'),
-				values: [
-					...chapters.map((c) => c.content),
-					...chapters.map((c) => {
-						const subTitle = c.file.split('/')[1]
+			const embeddings = await getEmbeddings([
+				...chapters.map((c) => c.content),
+				...chapters.map((c) => {
+					const subTitle = c.file.split('/')[1]
 
-						return `${subTitle} ${c.title}`
-					}),
-					...chapters.map((c) =>
-						c.file.slice(c.file.lastIndexOf('/') + 1, -3)
-					)
-				]
-			})
+					return `${subTitle} ${c.title}`
+				}),
+				...chapters.map((c) =>
+					c.file.slice(c.file.lastIndexOf('/') + 1, -3)
+				)
+			])
 
 			if (embeddings.length) {
 				const values = <unknown[]>[]
@@ -300,11 +327,11 @@ export const structure = async () => {
 								model,
 								prompt: `Would you kindly summarize this into a SKILLS.md section so you can read later. Be concise. Sacrifice grammar for the sake of concision while retain as much context as possible.\n\n${content}`
 							})
-								.then((x) => {
-									if (!x.text) throw new Error()
+								.then((text) => {
+									if (!text) throw new Error()
 
-									let summary = x.text
-										.slice(x.text.indexOf('\n', 3))
+									let summary = text
+										.slice(text.indexOf('\n', 3))
 										.trimStart()
 
 									if (summary.startsWith('```')) {
@@ -427,9 +454,6 @@ export const structure = async () => {
 	await queue.onEmpty()
 
 	log('Data insertion completed')
-
-	if (process.env.NODE_ENV === 'production')
-		await rmdir('docs', { recursive: true })
 
 	inProcess = false
 }

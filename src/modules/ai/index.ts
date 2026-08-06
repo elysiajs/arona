@@ -104,23 +104,17 @@ export const ai = new Elysia()
 					message.includes('```') || message.length > 1024
 						? true
 						: think,
-				onFinish({ usage, content }) {
-					const last = content.at(-1)
-
+				onFinish({ usage, text, reasoning }) {
 					const attributes = {
 						'ai.question': message,
-						'ai.response': last?.type === 'text' ? last.text : '',
-						'ai.reasoning': content
-							.filter((content) => content.type === 'reasoning')
-							.map((reasoning) => reasoning.text),
+						'ai.response': text,
+						'ai.reasoning': reasoning,
 						'ai.references': references.map((x) => x.link),
-						'ai.input_tokens': usage.inputTokens ?? 0,
-						'ai.cached_input_tokens':
-							usage.inputTokenDetails.cacheReadTokens ?? 0,
-						'ai.output_tokens': usage.outputTokens ?? 0,
-						'ai.reasoning_tokens':
-							usage.outputTokenDetails.reasoningTokens ?? 0,
-						'ai.total_tokens': usage.totalTokens ?? 0
+						'ai.input_tokens': usage.inputTokens,
+						'ai.cached_input_tokens': usage.cachedInputTokens,
+						'ai.output_tokens': usage.outputTokens,
+						'ai.reasoning_tokens': usage.reasoningTokens,
+						'ai.total_tokens': usage.totalTokens
 					} as const
 
 					const ai = startSpan('AI Log')

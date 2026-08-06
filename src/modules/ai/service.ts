@@ -1,11 +1,5 @@
 import { timingSafeEqual } from 'crypto'
 
-import {
-	ModelMessage,
-	stepCountIs,
-	streamText,
-	type GenerateTextOnEndCallback
-} from 'ai'
 import { LRUCache } from 'lru-cache'
 
 import { record, setAttributes } from '@elysia/opentelemetry'
@@ -18,7 +12,11 @@ import {
 	model,
 	raceFirstTruthy,
 	redis,
-	sql
+	sql,
+	streamText,
+	type ChatMessage,
+	type StreamTextResult,
+	type Tool
 } from '@arona/libs'
 import {
 	createHistoryTool,
@@ -38,7 +36,7 @@ interface AskParams {
 	history: History | undefined
 	references: Reference[]
 	ip: string
-	onFinish?: GenerateTextOnEndCallback<{}>
+	onFinish?: (result: StreamTextResult) => void
 	onToolStart?: () => void
 	onToolEnd?: () => void
 	think?: boolean
@@ -68,37 +66,35 @@ export function ask({
 				content: `Page: ${references[0].link}\n# ${references[0].title}\n${references
 					.map((x) => `## ${x.title}\n${x.summary}`)
 					.join('\n\n')}`
-			} satisfies ModelMessage)
+			} satisfies ChatMessage)
 		: undefined
 
 	return record('Gather Resources', () =>
 		streamText({
 			model,
 			abortSignal,
-			tools: Object.assign(
-				{
-					readPage: readPageTool,
-					search: searchTool,
-					tableOfContents: tableOfContentsTool
-				},
-				(history?.length ?? 0) > 3
+			tools: <Record<string, Tool>>{
+				readPage: readPageTool,
+				search: searchTool,
+				tableOfContents: tableOfContentsTool,
+				...((history?.length ?? 0) > 3
 					? { readHistory: readHistoryTool! }
-					: {}
-			) as any,
-			stopWhen: [
-				stepCountIs(think ? 12 : 8),
-				() => references.length > 32
-			],
+					: {})
+			},
+			maxSteps: think ? 12 : 8,
+			stopWhen: () => references.length > 32,
 			seed,
 			topP: 0.75,
 			presencePenalty: 0.4,
 			maxOutputTokens: 2560,
-			maxRetries: 3,
 			system: instruction,
 			messages: [
 				...(initialReference ? [initialReference] : []),
 				...(history?.length
-					? compressHistory(history).slice(0, 3)
+					? compressHistory(history)
+							.slice(0, 3)
+							// drop extra fields like checksum before sending to provider
+							.map(({ role, content }) => ({ role, content }))
 					: []),
 				{
 					role: 'user',
@@ -107,37 +103,13 @@ export function ask({
 						: `Hi Elysia chan! Would you kindly help me? ${message}`
 				}
 			],
-			providerOptions: {
-				openrouter: {
-					user: ip,
-					reasoning: {
-						effort: think ? 'medium' : 'low'
-					}
-				}
-				// groq: {
-				// 	reasoningFormat: 'hidden',
-				// 	reasoningEffort: think
-				// 		? 'medium'
-				// 		: 'low',
-				// 	user: ip,
-				// 	serviceTier: 'auto'
-				// }
-				// cerebras: {
-				// 	reasoning_effort: think
-				// 		? 'medium'
-				// 		: 'low',
-				// 	reasoningEffort: think
-				// 		? 'medium'
-				// 		: 'low'
-				// }
-			},
-			onToolExecutionStart: onToolStart,
-			onToolExecutionEnd: onToolEnd,
-			onEnd(metadata) {
-				onFinish?.(metadata as any)
-			}
+			user: ip,
+			reasoningEffort: think ? 'medium' : 'low',
+			onToolStart,
+			onToolEnd,
+			onFinish
 		})
-	).textStream
+	)
 }
 
 export async function readPage(link: string): Promise<Reference | Reference[]> {

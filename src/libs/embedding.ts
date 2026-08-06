@@ -1,7 +1,6 @@
-import { embed } from 'ai'
 import { LRUCache } from 'lru-cache'
 
-import { openai } from './ai'
+import { getEmbeddings } from './ai'
 import { retry } from './retry'
 import { record } from '@elysia/opentelemetry'
 
@@ -39,8 +38,7 @@ interface GetEmbeddingOptions {
 	skipFiller?: boolean
 }
 
-type EmbeddingModelV3Embedding = Awaited<ReturnType<typeof embed>>['embedding']
-const pendingCache = new Map<string, Promise<EmbeddingModelV3Embedding>>()
+const pendingCache = new Map<string, Promise<number[]>>()
 
 export const getEmbedding = async (
 	prompt: string,
@@ -54,12 +52,9 @@ export const getEmbedding = async (
 	if (pendingCache.has(prompt)) return pendingCache.get(prompt)!
 
 	return record(`getEmbedding: ${prompt}`, async () => {
-		const pending = retry(() =>
-			embed({
-				model: openai.embeddingModel('text-embedding-3-small'),
-				value: prompt
-			})
-		).then((v) => v.embedding)
+		const pending = retry(() => getEmbeddings([prompt])).then(
+			([embedding]) => embedding
+		)
 
 		pendingCache.set(prompt, pending)
 

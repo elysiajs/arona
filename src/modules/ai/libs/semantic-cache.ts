@@ -1,8 +1,8 @@
 import { record } from '@elysia/opentelemetry'
-import { generateText } from 'ai'
 import { LRUCache } from 'lru-cache'
 
 import {
+	generateText,
 	getEmbeddingBuffer,
 	log,
 	smallModel,
@@ -140,7 +140,7 @@ export abstract class SemanticCache {
 
 		return record(`SemanticCache.normalize: ${prompt}`, async (span) => {
 			try {
-				let { text } = await retry(
+				let text = await retry(
 					() =>
 						generateText({
 							model: smallModel,
@@ -149,19 +149,8 @@ export abstract class SemanticCache {
 							temperature: 0,
 							topP: 1,
 							maxOutputTokens: 192,
-							providerOptions: {
-								openrouter: {
-									user: ip,
-									reasoning: {
-										effort: 'minimal'
-									}
-								}
-								// groq: {
-								// 	reasoningEffort: 'low',
-								// 	serviceTier: 'auto',
-								// 	structuredOutputs: false
-								// }
-							}
+							user: ip,
+							reasoningEffort: 'minimal'
 						}),
 					3,
 					500
