@@ -12,7 +12,7 @@ Bun.build({
 	// 	identifiers: false,
 	// 	keepNames: true
 	// },
-	plugins: [aot('src/server.ts')]
+	plugins: [aot('src/server.ts', { verbose: true })]
 }).then(() => {
 	process.exit(0)
 })

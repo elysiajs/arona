@@ -14,7 +14,7 @@
 		"@elysia/opentelemetry": "^2.0.0-exp.0",
 		"@opentelemetry/exporter-trace-otlp-proto": "^0.219.0",
 		"@opentelemetry/sdk-trace-node": "^2.8.0",
-		"elysia": "2.0.0-beta.1",
+		"elysia": "2.0.0-beta.2",
 		"evlog": "^2.19.2",
 		"ioredis": "^5.11.1",
 		"lru-cache": "^11.5.1",
